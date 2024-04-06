@@ -1,0 +1,54 @@
+# Dataset
+d_node: 1
+d_target: 1
+d_pos: 2
+boundary_condition: dirichlet
+noise: 0.0
+model_name: darcy_exts
+num_data: 1024
+# fine_resolution: 1024
+# subsample_node: 2
+# subsample_attn: 8
+# train_dataset: darcy_R1024_N1024_1.mat
+# valid_dataset: darcy_R1024_N1024_2.mat
+fine_resolution: 421
+subsample_node: 3
+subsample_attn: 6
+train_dataset: darcy_R421_N1024_1.mat
+valid_dataset: darcy_R421_N1024_2.mat
+
+# Module
+downscaler_size: null
+downscaler_activation: relu
+upscaler_size: null
+upscaler_activation: silu
+downscaler_droprate: 0.05
+upscaler_droprate: 0.0
+encoder_droprate: 0.05
+decoder_droprate: 0.0
+gt_droprate: 0.0
+
+d_hidden: 128
+n_encoder_layer: 6
+n_encoder_head: 4
+d_encoder_ffn_hidden: 256
+init_xavier_uniform_gain: 0.01
+init_diagonal_weight: 0.01
+init_symmetric: False
+norm_eps: 1.e-6
+
+regressor_type: fft2D
+use_spacial_fc: True
+n_regressor_layer: 2
+d_frequency: 32
+d_fourier_mode: 12
+regressor_activation: silu
+
+
+# Training
+seed: 1127802
+num_worker: 8
+epochs: 100
+batch_size: 4
+lr: 1.e-3
+metric_gamma: 0.5
