@@ -1,5 +1,4 @@
-#ifndef __MH32_GEMM_CU__
-#define __MH32_GEMM_CU__
+#pragma once
 
 #include <cuda.h>
 #include "utils.cu"
@@ -624,5 +623,3 @@ __host__ void lnorm_grad_ccc_cuda(
 } // namespace mh32 
 
 } // namespace SpGT
-
-#endif // __MH32_GEMM_CU__

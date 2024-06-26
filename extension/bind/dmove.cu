@@ -1,6 +1,3 @@
-#ifndef __TRANS_EXTS_CU__
-#define __TRANS_EXTS_CU__
-
 #include <torch/extension.h>
 #include "../native/datamove.cu"
 
@@ -70,4 +67,3 @@ PYBIND11_MODULE(dmove, m) {
     m.def("scatter_transpose_dual", &exts::scatter_transpose_dual, "scatter_transpose_dual");
 }
 
-#endif // __TRANS_EXTS_CU__

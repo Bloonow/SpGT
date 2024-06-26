@@ -1,8 +1,5 @@
-#ifndef __GALERKIN_CU__
-#define __GALERKIN_CU__
-
 #include <torch/extension.h>
-#include "../native/mh32_gemm.cu"
+#include "../native/multihead_dim32.cu"
 #include "../native/matmul.cu"
 #include "../native/datamove.cu"
 
@@ -43,8 +40,8 @@ std::tuple<Tensor,Tensor,Tensor> mh32_projpos_rrc_backward(
     Tensor grad_input = torch::matmul(grad_out, weight.transpose(0, 1));
     Tensor grad_bias = torch::sum(grad_out, torch::IntArrayRef({0, 1}));
     Tensor grad_weight = torch::matmul(
-        input.view({batch * seqlen, d_model}).transpose(0, 1),
-        grad_out.view({batch * seqlen, d_model})
+        input.reshape({batch * seqlen, d_model}).transpose(0, 1),
+        grad_out.reshape({batch * seqlen, d_model})
     );
     return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
 }
@@ -94,8 +91,8 @@ std::tuple<Tensor,Tensor,Tensor,Tensor,Tensor> mh32_projpos_lnorm_rrc_backward(
     Tensor grad_input = torch::matmul(grad_out, weight.transpose(0, 1));
     Tensor grad_bias = torch::sum(grad_out, torch::IntArrayRef({0, 1}));
     Tensor grad_weight = torch::matmul(
-        input.view({batch * seqlen, d_model}).transpose(0, 1),
-        grad_out.view({batch * seqlen, d_model})
+        input.reshape({batch * seqlen, d_model}).transpose(0, 1),
+        grad_out.reshape({batch * seqlen, d_model})
     );
     return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias), std::move(grad_lnw), std::move(grad_lnb));
 }
@@ -207,5 +204,3 @@ PYBIND11_MODULE(galerkin, m) {
     m.def("mh32_galattn_cccr_backward", &exts::mh32_galattn_cccr_backward, "mh32_galattn_cccr_backward");
     m.def("batched_skinny_gemm", &exts::batched_skinny_gemm, "batched_skinny_gemm");
 }
-
-#endif // __GALERKIN_CU__

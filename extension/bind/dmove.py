@@ -3,10 +3,10 @@ from typing import Any
 import torch
 import torch.utils.cpp_extension
 from torch import Tensor
+from SpGT.common.path import EXTENSION_PATH
 
-from SpGT.common.path import EXTS_PATH
 dmove = torch.utils.cpp_extension.load(
-    'dmove', os.path.join(EXTS_PATH, 'bind', 'dmove.cu'), verbose=True
+    'dmove', os.path.join(EXTENSION_PATH, 'bind', 'dmove.cu'), verbose=True
 )
 
 

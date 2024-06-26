@@ -1,6 +1,4 @@
-#ifndef __UTILS_CU__
-#define __UTILS_CU__
-
+#pragma once
 #include <cuComplex.h>
 
 namespace SpGT {
@@ -18,6 +16,7 @@ template <int num_datum> struct SharedMemory<cuComplex, num_datum> {
         return reinterpret_cast<cuComplex*>(__shared_memory__);
     }
 };
+
 
 // #define GLOBAL_BUFFER_MESSAGE
 class GlobalBuffer {
@@ -68,5 +67,3 @@ public:
 };
 
 } // namespace SpGT
-
-#endif // __UTILS_CU__

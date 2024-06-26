@@ -84,7 +84,7 @@ class GalerkinAttention(torch.nn.Module):
             V, self.weight_V, self.bias_V, self.ln_weight_V, self.ln_bias_V, position,
             self.norm_eps, self.num_head, self.dim_head, self.dim_position
         )
-        X = self.multihead_attention(Q, K, V, droprate=self.attn_droprate)
+        X = self.multihead_galerkin_attention(Q, K, V, droprate=self.attn_droprate)
         # X : [N, num_head, seqlen, dim_position + dim_head]
         X = X.transpose(1, 2).contiguous().view(N, seqlen, self.num_head * (self.dim_position + self.dim_head))
         X = self.fc_layer(X)
@@ -141,7 +141,7 @@ class GalerkinAttention(torch.nn.Module):
         return X
 
     @staticmethod
-    def multihead_attention(Q: Tensor, K: Tensor, V: Tensor, droprate) -> Tensor:
+    def multihead_galerkin_attention(Q: Tensor, K: Tensor, V: Tensor, droprate) -> Tensor:
         """
         Q,K,V : [N, num_head, seqlen, dim_position + dim_head]
         """
@@ -187,7 +187,7 @@ class EncoderLayer(torch.nn.Module):
             dim_hidden, dim_hidden, ffn_dim_hidden, ffn_droprate, ffn_activation
         )
 
-    def forward(self, X: Tensor, position: Tensor = None):
+    def forward(self, X: Tensor, position: Tensor):
         """
         X      : [N, seqlen, dim_hidden]
         pos    : [N, seqlen, dim_position]
@@ -210,7 +210,7 @@ class SpectralConv2D(torch.nn.Module):
         self.mode = mode
         self.droprate = droprate
         self.activation_layer = torch.nn.SiLU() if activation == 'silu' else torch.nn.ReLU()
-        self.linear = torch.nn.Linear(in_dim, out_dim)
+        self.residual_layer = torch.nn.Linear(in_dim, out_dim)
         self.fourier_weight = torch.nn.ParameterList([
             torch.nn.Parameter(torch.empty([in_dim, out_dim, mode, mode, 2])) for _ in range(2)
         ])
@@ -223,7 +223,7 @@ class SpectralConv2D(torch.nn.Module):
         Output : [N, r, r, out_dim]
         """
         N, r, r, in_dim = X.size()
-        res = self.linear(X)  # [N, r, r, out_dim]
+        res = self.residual_layer(X)  # [N, r, r, out_dim]
         X = torch.nn.functional.dropout(X, p=self.droprate)
 
         # X : [N, r, r, in_dim]

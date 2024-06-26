@@ -1,5 +1,4 @@
-#ifndef __MATMUL_CU__
-#define __MATMUL_CU__
+#pragma once
 
 #include <cuda.h>
 #include "utils.cu"
@@ -1278,5 +1277,3 @@ __host__ void sgemm_cuda(
 } // namespace sgemm_32x32_4x8_SplitK
 
 } // namespace SpGT
-
-#endif // __MATMUL_CU__

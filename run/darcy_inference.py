@@ -5,50 +5,49 @@ from torch.utils.data.dataloader import DataLoader
 from SpGT.common.path import DATA_PATH, MODEL_PATH
 from SpGT.common.trivial import get_num_params, set_seed
 from SpGT.config.config_accessor import get_darcy_config
-from SpGT.dataset.darcy_dataset import DarcyDataset
+from SpGT.dataset.darcy_dataset import DarcyDataset, get_guass_normalizer
 from SpGT.engine.darcy_engine import validate_epoch_darcy
 from SpGT.engine.metric import WeightedL2Loss2D
-from SpGT.module.model import GalerkinTransformer2D
-from SpGT.module.model_exts import GalerkinTransformer2D_Exts
+from SpGT.network.model import GalerkinTransformer2D
+from SpGT.network.sp_model import Sp_GalerkinTransformer2D
 
 
 def darcy_inference(cfg, checkpoint):
-    # 验证要训练的模型是否存在
-    model_name: str = cfg['model_name']
-    if model_name.endswith('exts'):
-        ModuleClz = GalerkinTransformer2D_Exts
-    elif model_name.endswith('orig'):
-        ModuleClz = GalerkinTransformer2D
-    else:
-        raise NameError(f'The Module "{model_name}" Not Exist')
-
-    # 配置一些超参数
+    # 配置一些超参数，推理时所采用的分辨率可能与训练时不同
     device = torch.cuda.current_device()
     set_seed(cfg['seed'])
     R = cfg['fine_resolution']
-    sub = cfg['subsample_node']
+    sub_node = cfg['subsample_node']
     sub_attn = cfg['subsample_attn']
-    r = int((R - 1) / sub + 1)
+    r = int((R - 1) / sub_node + 1)
     r_attn = int((R - 1) / sub_attn + 1)
-    sample_normalizer = checkpoint['Sample_Normalizer']
-    target_normalizer = checkpoint['Target_Normalizer']
+
+    # 构建数据集
+    train_path = os.path.join(DATA_PATH, cfg['train_dataset'])
+    valid_path = os.path.join(DATA_PATH, cfg['valid_dataset'])
+    node_normalizer, target_normalizer = get_guass_normalizer(train_path, sub_node)
+    valid_ds = DarcyDataset(
+        valid_path, sub_node, sub_attn, cfg['num_data'], cfg['fine_resolution'], is_training=False,
+        noise=cfg['noise'], random_seed=cfg['seed'], node_normalizer=node_normalizer
+    )
+    valid_loader = DataLoader(
+        valid_ds, 2 * cfg['batch_size'], shuffle=False, num_workers=cfg['num_load_worker'], pin_memory=True
+    )
+    eg = next(iter(valid_loader))
+    print('=' * 20, 'Data loader batch', '=' * 20)
+    for key in eg.keys():
+        # print(key, "\t", eg[key].shape)
+        print(f'{key:<20}{eg[key].shape}')
+    print('=' * (40 + len('Data loader batch') + 2))
 
     # 构建模型
     torch.cuda.empty_cache()
-    cfg['target_normalizer'] = target_normalizer.to(device)
-    model = ModuleClz(cfg)
+    cfg['target_normalizer'] = target_normalizer.numpy_to_torch(device)
+    model = Sp_GalerkinTransformer2D(cfg)
     model.load_state_dict(checkpoint['Module'])
     model = model.to(device)
     print(f"\nThe Numbers of Model's Parameters: {get_num_params(model)}\n")
     valid_loss_func = WeightedL2Loss2D(is_regularization=False, S=r)
-
-    # 构建数据集
-    valid_path = os.path.join(DATA_PATH, cfg['valid_dataset'])
-    valid_ds = DarcyDataset(
-        valid_path, num_data=cfg['num_data'], fine_resolution=R, subsample_node=sub, subsample_attn=sub_attn,
-        is_training=False, noise=cfg['noise'], sample_normalizer=sample_normalizer
-    )
-    valid_loader = DataLoader(valid_ds, cfg['batch_size'], shuffle=False, num_workers=cfg['num_worker'], pin_memory=True)
 
     # 进行验证
     time_start = time.time()
@@ -57,8 +56,21 @@ def darcy_inference(cfg, checkpoint):
     print(f'========== valid_time: {time_end - time_start:.6f} ==========')
     print(f'========== Metric : {metric} ==========')
 
+    # torch.cuda.empty_cache()
+    # node, position, grid = eg['node'].to(device), eg['position'].to(device), eg['grid'].to(device)
+    # with torch.profiler.profile(
+    #     activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
+    #     schedule=torch.profiler.schedule(wait=2, warmup=2, active=3),
+    #     on_trace_ready=torch.profiler.tensorboard_trace_handler(dir_name='tblog'),
+    #     record_shapes=True, profile_memory=True,
+    # ) as prof:
+    #     for _ in range(10):
+    #         torch.cuda.synchronize()
+    #         pred = model(node, position=position, grid=grid)
+    #         prof.step()
+
 
 if __name__ == '__main__':
     cfg = get_darcy_config()
-    checkpoint = torch.load(os.path.join(MODEL_PATH, 'darcy_exts_R141_R71_0624_2158.pt'), map_location='cpu')
+    checkpoint = torch.load(os.path.join(MODEL_PATH, 'GT_r141d128s12_0626_1347.pt'), map_location='cpu')
     darcy_inference(cfg=cfg, checkpoint=checkpoint)

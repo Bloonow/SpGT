@@ -10,7 +10,7 @@ from SpGT.engine.darcy_engine import train_epoch_darcy, validate_epoch_darcy
 from SpGT.engine.metric import WeightedL2Loss2D
 from SpGT.engine.train import run_train
 from SpGT.network.model import GalerkinTransformer2D
-# from SpGT.network.sp_model import Sp_GalerkinTransformer2D
+from SpGT.network.sp_model import Sp_GalerkinTransformer2D
 
 
 def darcy_train(cfg):
@@ -18,20 +18,20 @@ def darcy_train(cfg):
     device = torch.cuda.current_device()
     set_seed(cfg['seed'])
     R = cfg['fine_resolution']
-    sub = cfg['subsample_node']
+    sub_node = cfg['subsample_node']
     sub_attn = cfg['subsample_attn']
-    r = int((R - 1) / sub + 1)
+    r = int((R - 1) / sub_node + 1)
 
     # 构建数据集
     train_path = os.path.join(DATA_PATH, cfg['train_dataset'])
     valid_path = os.path.join(DATA_PATH, cfg['valid_dataset'])
     train_ds = DarcyDataset(
-        train_path, sub, sub_attn, cfg['num_data'], cfg['fine_resolution'], is_training=True,
+        train_path, sub_node, sub_attn, cfg['num_data'], cfg['fine_resolution'], is_training=True,
         noise=cfg['noise'], random_seed=cfg['seed']
     )
     node_normalizer, target_normalizer = train_ds.node_normalizer, train_ds.target_normalizer
     valid_ds = DarcyDataset(
-        valid_path, sub, sub_attn, 128, cfg['fine_resolution'], is_training=False,
+        valid_path, sub_node, sub_attn, 128, cfg['fine_resolution'], is_training=False,
         noise=cfg['noise'], random_seed=cfg['seed'], node_normalizer=node_normalizer
     )
     train_loader = DataLoader(
@@ -40,16 +40,17 @@ def darcy_train(cfg):
     valid_loader = DataLoader(
         valid_ds, 2 * cfg['batch_size'], shuffle=False, num_workers=cfg['num_load_worker'], pin_memory=True
     )
-    data_sample = next(iter(train_loader))
+    eg = next(iter(train_loader))
     print('=' * 20, 'Data loader batch', '=' * 20)
-    for key in data_sample.keys():
-        print(key, "\t\t", data_sample[key].shape)
+    for key in eg.keys():
+        # print(key, "\t", eg[key].shape)
+        print(f'{key:<20}{eg[key].shape}')
     print('=' * (40 + len('Data loader batch') + 2))
 
     # 构建模型与训练配置
     torch.cuda.empty_cache()
     cfg['target_normalizer'] = target_normalizer.numpy_to_torch(device)
-    model = GalerkinTransformer2D(cfg)
+    model = Sp_GalerkinTransformer2D(cfg)
     model = model.to(device)
     print(f"\nThe Numbers of Model's Parameters: {get_num_params(model)}\n")
     epochs = cfg['epochs']
@@ -78,9 +79,10 @@ def darcy_train(cfg):
     torch.save(checkpoint, save_path)
     print(f'========== Saving Results at {save_path} ==========')
 
+    # 分析模型执行过程
     # torch.cuda.empty_cache()
-    # node, position, grid = data_sample['node'].to(device), data_sample['position'].to(device), data_sample['grid'].to(device)
-    # coeff, target, target_grad = data_sample['coeff'].to(device), data_sample['target'].to(device), data_sample['target_grad'].to(device)
+    # node, position, grid = eg['node'].to(device), eg['position'].to(device), eg['grid'].to(device)
+    # coeff, target, target_grad = eg['coeff'].to(device), eg['target'].to(device), eg['target_grad'].to(device)
     # with torch.profiler.profile(
     #     activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
     #     schedule=torch.profiler.schedule(wait=2, warmup=2, active=3),
@@ -100,6 +102,4 @@ def darcy_train(cfg):
 
 if __name__ == '__main__':
     cfg = get_darcy_config()
-    darcy_train(cfg)
-    # speed : 417.720094
-    # None  : 700.976367
+    darcy_train(cfg=cfg)

@@ -1,5 +1,4 @@
-#ifndef __TRANSPOSE_CU__
-#define __TRANSPOSE_CU__
+#pragma once
 
 #include <cuda.h>
 #include <cuComplex.h>
@@ -158,5 +157,3 @@ __host__ void batched_gather_transpose_2D(
 
 } // namespace datamove
 } // namespace SpGT
-
-#endif // __TRANSPOSE_CU__

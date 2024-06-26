@@ -3,10 +3,10 @@ import torch
 from torch import Tensor
 from typing import Any
 import torch.utils.cpp_extension
+from SpGT.common.path import EXTENSION_PATH
 
-from SpGT.common.path import EXTS_PATH
 galerkin = torch.utils.cpp_extension.load(
-    'galerkin', os.path.join(EXTS_PATH, 'bind', 'galerkin.cu'), verbose=True
+    'galerkin', os.path.join(EXTENSION_PATH, 'bind', 'galerkin.cu'), verbose=True
 )
 
 
@@ -76,21 +76,21 @@ class GalAttn_cccr_Function(torch.autograd.Function):
         return grad_Q, grad_K, grad_V
 
 
-def projpos_rrc_cuda(
+def multihead_projection_with_position_rrc_cuda(
     input: Tensor, weight: Tensor, bias: Tensor, pos: Tensor, n_head, d_k, d_pos
 ) -> Tensor:
     return MH32_ProjPos_rrc_Function.apply(input, weight, bias, pos, n_head, d_k, d_pos)
 
 
-def projpos_lnorm_rrc_cuda(
+def multihead_projection_layernorm_with_position_rrc_cuda(
     input: Tensor, weight: Tensor, bias: Tensor, lnw: Tensor, lnb: Tensor, pos: Tensor, norm_eps: float, n_head, d_k, d_pos
 ) -> Tensor:
     return MH32_ProjPos_Lnorm_rrc_Function.apply(input, weight, bias, lnw, lnb, pos, norm_eps, n_head, d_k, d_pos)
 
 
-def galattn_cccr_cuda(Q: Tensor, K: Tensor, V: Tensor) -> Tensor:
+def multihead_galerkin_attention_cccr_cuda(Q: Tensor, K: Tensor, V: Tensor) -> Tensor:
     return GalAttn_cccr_Function.apply(Q, K, V)
 
 
-def batched_skinny_gemm(A: Tensor, B: Tensor) -> Tensor:
-    return galerkin.batched_skinny_gemm(A, B, 1.)
+def batched_skinny_gemm(A: Tensor, B: Tensor, alpha: float = 1.0) -> Tensor:
+    return galerkin.batched_skinny_gemm(A, B, alpha)
