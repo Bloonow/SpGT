@@ -79,7 +79,7 @@ def darcy_train(cfg):
     torch.save(checkpoint, save_path)
     print(f'========== Saving Results at {save_path} ==========')
 
-    # 分析模型执行过程
+    # # 分析模型执行过程
     # torch.cuda.empty_cache()
     # node, position, grid = eg['node'].to(device), eg['position'].to(device), eg['grid'].to(device)
     # coeff, target, target_grad = eg['coeff'].to(device), eg['target'].to(device), eg['target_grad'].to(device)
