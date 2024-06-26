@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import DataLoader, DistributedSampler
 from SpGT.common.path import CONFIG_PATH, DATA_PATH, MODEL_PATH
 from SpGT.common.trivial import distributed_initialize, get_daytime_string, get_num_params, is_main_process, set_seed
-from SpGT.config.config_reader import get_darcy_config
+from SpGT.config.config_accessor import get_darcy_config
 from SpGT.dataset.darcy_dataset import DarcyDataset
 from SpGT.engine.darcy_engine import train_epoch_darcy, validate_epoch_darcy
 from SpGT.engine.metric import WeightedL2Loss2D

@@ -10,7 +10,7 @@ class WeightedL2Loss2D(torch.nn.modules.loss._WeightedLoss):
         super().__init__()
         # 原始数据格式为 [N, S, S]，其中，S 表示一个维度上数据点的数目，则 H 可表示两个点之间的步长
         self.S = S
-        self.H = 1. / S
+        self.H = 1.0 / S
         self.dim = dim
         self.dilation = dilation
         self.alpha = alpha
@@ -31,17 +31,18 @@ class WeightedL2Loss2D(torch.nn.modules.loss._WeightedLoss):
         grad = torch.stack([grad_x, grad_y], dim=-1)
         return grad * S
 
-    def forward(self, pred: Tensor, target: Tensor, pred_grad: Tensor = None, target_grad: Tensor = None, coeff: Tensor = None):
+    def forward(
+        self, pred: Tensor, target: Tensor,
+        pred_grad: Tensor = None, target_grad: Tensor = None, coeff: Tensor = None
+    ):
         """
-        loss = alpha * loss_grad + beta * loss_pred
-        Inputs:
-            pred        : [N, r, r, 1]
-            target      : [N, r, r, 1]
-            pred_grad   : [N, r, r, 2]
-            target_grad : [N, r, r, 2]
-            coeff       : [N, r, r, 1]
-        Outputs:
-            loss, regularizer, metric
+        pred        : [N, r, r, 1]
+        target      : [N, r, r, 1]
+        pred_grad   : [N, r, r, 2]
+        target_grad : [N, r, r, 2]
+        coeff       : [N, r, r, 1]
+        Outputs     : loss, regularizer, metric
+        loss        = alpha * loss_grad + beta * loss_pred
         """
         pred, target = pred.squeeze(dim=-1), target.squeeze(dim=-1)
         target_norm = target.pow(2).mean(dim=[1, 2]) + self.eps
@@ -70,7 +71,9 @@ class WeightedL2Loss2D(torch.nn.modules.loss._WeightedLoss):
             s = self.dilation // 2
             target_grad = target_grad[:, s:-s, s:-s, :].contiguous()
             coeff = coeff[:, s:-s, s:-s].contiguous()
-            regularizer = self.gamma * self.H * ((coeff * (target_grad - pred_diff)).pow(2)).mean(dim=[1, 2, 3]) / target_grad_norm
+            regularizer = self.gamma * self.H * (
+                (coeff * (target_grad - pred_diff)).pow(2)
+            ).mean(dim=[1, 2, 3]) / target_grad_norm
             regularizer = regularizer.sqrt().mean() if self.is_normalization else regularizer.mean()
         else:
             regularizer = torch.tensor([0.], requires_grad=loss.requires_grad, device=loss.device)

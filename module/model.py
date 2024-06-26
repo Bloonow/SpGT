@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import torch
 from torch import Tensor
-from SpGT.dataset.matio import write_matfile
+from SpGT.dataset.data_accessor import write_matfile
 
 from SpGT.module.layer import DownInterpolate2D, FeedForward, SimpleAttention, SpectralConv2D, UpInterpolate2D
 

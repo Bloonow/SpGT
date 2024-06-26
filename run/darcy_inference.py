@@ -4,7 +4,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 from SpGT.common.path import DATA_PATH, MODEL_PATH
 from SpGT.common.trivial import get_num_params, set_seed
-from SpGT.config.config_reader import get_darcy_config
+from SpGT.config.config_accessor import get_darcy_config
 from SpGT.dataset.darcy_dataset import DarcyDataset
 from SpGT.engine.darcy_engine import validate_epoch_darcy
 from SpGT.engine.metric import WeightedL2Loss2D
@@ -60,5 +60,5 @@ def darcy_inference(cfg, checkpoint):
 
 if __name__ == '__main__':
     cfg = get_darcy_config()
-    checkpoint = torch.load(os.path.join(MODEL_PATH, 'darcy_exts_R512_R128.pt'), map_location='cpu')
+    checkpoint = torch.load(os.path.join(MODEL_PATH, 'darcy_exts_R141_R71_0624_2158.pt'), map_location='cpu')
     darcy_inference(cfg=cfg, checkpoint=checkpoint)
