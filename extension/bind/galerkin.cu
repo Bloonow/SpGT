@@ -31,9 +31,8 @@ std::tuple<Tensor,Tensor,Tensor> mh32_projpos_rrc_backward(
     // grad_out_ = [batch, n_head, d_pos + d_k, seqlen]
     // Tensor grad_out = grad_out_.slice(-2, d_pos).contiguous().view({batch, d_model, seqlen}).transpose(-2, -1).contiguous();
     Tensor grad_out = torch::empty({batch, seqlen, n_head, d_k}, input.options());
-    datamove::batched_gather_transpose_2D_cuda(
-        grad_out_.contiguous().data_ptr<float>() + d_pos * seqlen,
-        grad_out.data_ptr<float>(), n_head, d_pos + d_k, seqlen, d_k, batch
+    datamove::batched_transpose_gather(
+        grad_out_.contiguous().data_ptr<float>(), grad_out.data_ptr<float>(), n_head, d_pos, d_k, seqlen, batch
     );
     grad_out = grad_out.view({batch, seqlen, d_model});
 

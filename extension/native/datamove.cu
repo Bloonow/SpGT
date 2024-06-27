@@ -118,51 +118,48 @@ __host__ void transpose_scatter_cuda(
     transpose_scatter_16x16<<<grid_size, block_size>>>(ld_ptr, st_ptr, dim, H_all, W_all, H_low, W_low);
 }
 
-__global__ void batched_gather_transpose_2D_16x16(
-    const float *ld_ptr, float *st_ptr, const int M1, const int M0, const int N, const int m0
+__global__ void batched_transpose_gather_16x16(
+    const float *ld_ptr, float *st_ptr,
+    const int num_head, const int dim_position, const int dim_head, const int seqlen
 ) {
-    float *smem_buf = buffer::SharedMemory<float, 16 * 16>().pointer();  // + 16 以避免 bank 冲突，提升不大
-    const int brid = blockIdx.y;
-    const int bcid = blockIdx.x;
+    float *smem_buf = buffer::SharedMemory<float, 16 * 16>().pointer();
+    const int brid = blockIdx.x;
+    const int bcid = blockIdx.y;
     int baseX, baseY;
     float reg;  // 存储线程所搬运的值
 
-    baseX = bcid * 16 + threadIdx.x;  // 向右增长
-    baseY = brid * 16 + threadIdx.y;  // 向下增长
-    baseY = baseY + baseY / m0 * (M0 - m0);  // 处理 Slice 间隔
-    if ((baseY < (M1 - 1) * M0 + m0) && (baseX < N)) {
-        // 行主序
-        reg = *reinterpret_cast<const float*>(ld_ptr + blockIdx.z * (M1 * M0 * N) + baseY * N + baseX);
+    baseX = brid * 16 + threadIdx.x;  // 向下增长
+    baseY = bcid * 16 + threadIdx.y;  // 向右增长
+    baseY = baseY + (baseY / dim_head + 1) * dim_position;  // 处理 Slice 间隔
+    if ((baseX < seqlen) && (baseY < num_head * (dim_position + dim_head))) {
+        // 列主序
+        reg = *reinterpret_cast<const float*>(
+            ld_ptr + blockIdx.z * num_head * (dim_position + dim_head) * seqlen + baseY * seqlen + baseX
+        );
     }
     *reinterpret_cast<float*>(smem_buf + threadIdx.y * 16 + threadIdx.x) = reg;
     __syncthreads();
     reg = *reinterpret_cast<float*>(smem_buf + threadIdx.x * 16 + threadIdx.y);
-
-    baseX = brid * 16 + threadIdx.x;  // 向下增长
-    baseY = bcid * 16 + threadIdx.y;  // 向右增长
-    if ((baseX < M1 * m0) && (baseY < N)) {
-        *reinterpret_cast<float*>(st_ptr + blockIdx.z * (M1 * m0 * N) + baseY * M1 * m0 + baseX) = reg;
+    baseX = bcid * 16 + threadIdx.x;
+    baseY = brid * 16 + threadIdx.y;
+    if ((baseY < seqlen) && (baseX < num_head * dim_head)) {
+        // 行主序
+        *reinterpret_cast<float*>(
+            st_ptr + blockIdx.z * num_head * dim_head * seqlen + baseY * num_head * dim_head + baseX
+        ) = reg;
     }
-}
-
-// [batch, M1, M0, N] --> [batch, M1, :m0, N] --> [batch, N, M1, m0]
-__host__ void batched_gather_transpose_2D_cuda(
-    const float *ld_ptr, float *st_ptr, const int M1, const int M0, const int N, const int m0, const int batchCount
-) {
-    const dim3 block_size(16, 16, 1);
-    const dim3 grid_size((N + 15) / 16, (M1 * m0 + 15) / 16, batchCount);
-    batched_gather_transpose_2D_16x16<<<grid_size, block_size>>>(ld_ptr, st_ptr, M1, M0, N, m0);
 }
 
 /// [batch, num_head, dim_position: dim_position + dim_head, seqlen]
 /// [batch, seqlen, num_head, dim_head]
-__global__ void batched_transpose_gather_16x16(
+__host__ void batched_transpose_gather(
     const float *ld_ptr, float *st_ptr,
     const int num_head, const int dim_position, const int dim_head, const int seqlen,
     const int batchCount
 ) {
-    !
-
+    const dim3 block_size(16, 16, 1);
+    const dim3 grid_size((seqlen + 15) / 16, (num_head * dim_head + 15) / 16, batchCount);
+    batched_transpose_gather_16x16<<<grid_size, block_size>>>(ld_ptr, st_ptr, num_head, dim_position, dim_head, seqlen);
 }
 
 } // namespace datamove
