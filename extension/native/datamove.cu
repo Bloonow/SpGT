@@ -4,8 +4,6 @@
 #include <cuComplex.h>
 #include "utils.cu"
 
-namespace SpGT {
-
 namespace datamove {
 __global__ void batched_transpose_2D_16x16(
     const float *ld_ptr, float *st_ptr, const int M, const int N, const int stride
@@ -156,4 +154,3 @@ __host__ void batched_gather_transpose_2D(
 }
 
 } // namespace datamove
-} // namespace SpGT
