@@ -31,7 +31,7 @@ std::tuple<Tensor,Tensor,Tensor> mh32_projpos_rrc_backward(
     // grad_out_ = [batch, n_head, d_pos + d_k, seqlen]
     // Tensor grad_out = grad_out_.slice(-2, d_pos).contiguous().view({batch, d_model, seqlen}).transpose(-2, -1).contiguous();
     Tensor grad_out = torch::empty({batch, seqlen, n_head, d_k}, input.options());
-    SpGT::datamove::batched_gather_transpose_2D(
+    datamove::batched_gather_transpose_2D_cuda(
         grad_out_.contiguous().data_ptr<float>() + d_pos * seqlen,
         grad_out.data_ptr<float>(), n_head, d_pos + d_k, seqlen, d_k, batch
     );
@@ -84,7 +84,7 @@ std::tuple<Tensor,Tensor,Tensor,Tensor,Tensor> mh32_projpos_lnorm_rrc_backward(
         seqlen, d_model, seqlen * n_head * (d_pos + d_k), seqlen * n_head, seqlen * d_model, d_pos,
         batch
     );
-    SpGT::datamove::batched_transpose_2D_cuda(
+    datamove::batched_transpose_cuda(
         grad_out_col.data_ptr<float>(), grad_out.data_ptr<float>(), d_model, seqlen, d_model * seqlen, batch
     );
     // grad_out = [batch, seqlen, d_model]
@@ -106,15 +106,15 @@ Tensor mh32_galattn_cccr_forward(
     Tensor output = torch::empty({batch, n_head, seqlen, d_posk}, opts);  // 输出 output 为行主序
     float *tmp_ptr = tmp.data_ptr<float>();
 
-    SpGT::sgemm_32x32_4x8_SplitK::sgemm_cuda(
+    sgemm_32x32_4x8_SplitK::sgemm_cuda(
         K.data_ptr<float>(), V.data_ptr<float>(), tmp_ptr, (1.F / seqlen),
         d_posk, d_posk, seqlen, d_posk * seqlen, seqlen * d_posk, d_posk * d_posk,
-        SpGT::Gemm_Order::RCC, batch * n_head
+        GEMM_Order::RCC, batch * n_head
     );
-    SpGT::sgemm_32x32_4x4::sgemm_cuda(
+    sgemm_32x32_4x4::sgemm_cuda(
         Q.data_ptr<float>(), tmp_ptr, output.data_ptr<float>(), 1.F,
         seqlen, d_posk, d_posk, seqlen * d_posk, d_posk * d_posk, seqlen * d_posk,
-        SpGT::Gemm_Order::CCR, batch * n_head
+        GEMM_Order::CCR, batch * n_head
     );
     return std::move(output);
 }
@@ -135,35 +135,35 @@ std::tuple<Tensor, Tensor, Tensor> mh32_galattn_cccr_backward(
     float *v_ptr = V.data_ptr<float>();
     float *tmp_ptr = tmp.data_ptr<float>();
 
-    SpGT::sgemm_32x32_4x8_SplitK::sgemm_cuda(
+    sgemm_32x32_4x8_SplitK::sgemm_cuda(
         v_ptr, k_ptr, tmp_ptr, (1.F / seqlen),
         d_posk, d_posk, seqlen, d_posk * seqlen, seqlen * d_posk, d_posk * d_posk,
-        SpGT::Gemm_Order::RCC, batch * n_head
+        GEMM_Order::RCC, batch * n_head
     );
-    SpGT::sgemm_32x32_4x4::sgemm_cuda(
+    sgemm_32x32_4x4::sgemm_cuda(
         grad_ptr, tmp_ptr, grad_Q.data_ptr<float>(), 1.F, 
         seqlen, d_posk, d_posk, seqlen * d_posk, d_posk * d_posk, seqlen * d_posk,
-        SpGT::Gemm_Order::RCC, batch * n_head
+        GEMM_Order::RCC, batch * n_head
     );
-    SpGT::sgemm_32x32_4x8_SplitK::sgemm_cuda(
+    sgemm_32x32_4x8_SplitK::sgemm_cuda(
         grad_ptr, q_ptr, tmp_ptr, (1.F / seqlen),
         d_posk, d_posk, seqlen, d_posk * seqlen, seqlen * d_posk, d_posk * d_posk,
-        SpGT::Gemm_Order::CCC, batch * n_head
+        GEMM_Order::CCC, batch * n_head
     );
-    SpGT::sgemm_32x32_4x4::sgemm_cuda(
+    sgemm_32x32_4x4::sgemm_cuda(
         v_ptr, tmp_ptr, grad_K.data_ptr<float>(), 1.F, 
         seqlen, d_posk, d_posk, seqlen * d_posk, d_posk * d_posk, seqlen * d_posk,
-        SpGT::Gemm_Order::CCC, batch * n_head
+        GEMM_Order::CCC, batch * n_head
     );
-    SpGT::sgemm_32x32_4x8_SplitK::sgemm_cuda(
+    sgemm_32x32_4x8_SplitK::sgemm_cuda(
         q_ptr, grad_ptr, tmp_ptr, (1.F / seqlen),
         d_posk, d_posk, seqlen, d_posk * seqlen, seqlen * d_posk, d_posk * d_posk,
-        SpGT::Gemm_Order::RRC, batch * n_head
+        GEMM_Order::RRC, batch * n_head
     );
-    SpGT::sgemm_32x32_4x4::sgemm_cuda(
+    sgemm_32x32_4x4::sgemm_cuda(
         k_ptr, tmp_ptr, grad_V.data_ptr<float>(), 1.F, 
         seqlen, d_posk, d_posk, seqlen * d_posk, d_posk * d_posk, seqlen * d_posk,
-        SpGT::Gemm_Order::CCC, batch * n_head
+        GEMM_Order::CCC, batch * n_head
     );
     return std::make_tuple(std::move(grad_Q), std::move(grad_K), std::move(grad_V));
 }
@@ -186,9 +186,9 @@ Tensor batched_skinny_gemm(
     shape_vector.push_back(N);
     Tensor C = torch::empty(torch::makeArrayRef(shape_vector), A.options());
 
-    SpGT::sgemm_32x32_4x8_SplitK::sgemm_cuda(
+    sgemm_32x32_4x8_SplitK::sgemm_cuda(
         A.data_ptr<float>(), B.data_ptr<float>(), C.data_ptr<float>(), alpha,
-        M, N, K, M * K, K * N, M * N, SpGT::Gemm_Order::RRR, batchCount
+        M, N, K, M * K, K * N, M * N, GEMM_Order::RRR, batchCount
     );
     return std::move(C);
 }

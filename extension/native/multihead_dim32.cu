@@ -1,7 +1,6 @@
 #pragma once
-
 #include <cuda.h>
-#include "utils.cu"
+#include "buffer.cu"
 
 namespace SpGT {
 
@@ -162,7 +161,7 @@ __global__ void lnorm_grad_input_ccc_128x32_1x32(
     float lnw_val = 1.F, lnb_val = 0.F;
 
     // 共享内存，至少 32 (x2) 个 float 的空间，用于存放层归一化的 lnw, lnb 参数
-    float *lnw_smem = SharedMemory<float, 64>().pointer();
+    float *lnw_smem = buffer::SharedMemory<float, 64>().pointer();
     float *lnb_smem = reinterpret_cast<float*>(lnw_smem + 32);
     if (tid < 32) {
         *reinterpret_cast<float*>(lnw_smem + tid) = *reinterpret_cast<const float*>(lnw + bcid * 32 + tid);
@@ -231,7 +230,7 @@ __global__ void lnorm_grad_weight_bias_ccrr_loop256x1_1x1(
     float grad_lnw_val = 0.F, grad_lnb_val = 0.F;
 
     // 共享内存至少 8 (x2) 个 float 的空间
-    float *grad_lnw_smem = SharedMemory<float, 16>().pointer();
+    float *grad_lnw_smem = buffer::SharedMemory<float, 16>().pointer();
     float *grad_lnb_smem = reinterpret_cast<float*>(grad_lnw_smem + 8);
 
     // 每个线程块负责一列的全部数据
@@ -496,7 +495,7 @@ __global__ void sgemm_rrc_kernel(
     const int M, const int N, const int K, const int aS, const int bS, const int cS,
     const int d_pos
 ) {
-    float *smem_buf = SharedMemory<float, 1024 * 6>().pointer();
+    float *smem_buf = buffer::SharedMemory<float, 1024 * 6>().pointer();
     TileIndex T(M, N, K, aS, bS, cS);
     float Creg[2][2][4][4] = {};
     compute_block_rrr(
@@ -519,7 +518,7 @@ __global__ void sgemm_bias_rrc_kernel(
     const int M, const int N, const int K, const int aS, const int bS, const int cS,
     const int d_pos
 ) {
-    float *smem_buf = SharedMemory<float, 1024 * 6>().pointer();
+    float *smem_buf = buffer::SharedMemory<float, 1024 * 6>().pointer();
     TileIndex T(M, N, K, aS, bS, cS);
     float Creg[2][2][4][4] = {};
     compute_block_rrr(
@@ -544,7 +543,7 @@ __global__ void sgemm_bias_lnorm_rrc_kernel(
     const float *lnw, const float *lnb, float *invsigma, const float norm_eps, const int muS,
     const int d_pos
 ) {
-    float *smem_buf = SharedMemory<float, 1024 * 6>().pointer();
+    float *smem_buf = buffer::SharedMemory<float, 1024 * 6>().pointer();
     TileIndex T(M, N, K, aS, bS, cS);
     float Creg[2][2][4][4] = {};
     compute_block_rrr(
