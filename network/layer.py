@@ -237,6 +237,7 @@ class SpectralConv2D(torch.nn.Module):
         Out_ft[:, :, :m, :m] = self.complex_matmul_2D(X_ft[:, :, :m, :m], self.fourier_weight[0])
         Out_ft[:, :, -m:, :m] = self.complex_matmul_2D(X_ft[:, :, -m:, :m], self.fourier_weight[1])
         Out_ft = torch.complex(Out_ft[..., 0], Out_ft[..., 1])
+        # Out_ft : [N, self.out_dim, r, r // 2 + 1]
         X = torch.fft.irfft2(Out_ft, s=(r, r), norm='ortho')
         # X : [N, out_dim, r, r]
         X = torch.permute(X, [0, 2, 3, 1])
