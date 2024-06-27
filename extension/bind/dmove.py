@@ -10,19 +10,6 @@ dmove = torch.utils.cpp_extension.load(
 )
 
 
-class Batched_Transpose_2D_Function(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx: Any, X: Tensor, M_list: list[int], N_list: list[int], batch_list: list[int]):
-        ctx.extras_shape = [batch_list, M_list, N_list]
-        return dmove.batched_transpose_2D(X, M_list, N_list, batch_list)
-
-    @staticmethod
-    def backward(ctx: Any, grad_out: Tensor):
-        batch_list, M_list, N_list = ctx.extras_shape
-        grad_X = dmove.batched_transpose_2D(grad_out.contiguous(), N_list, M_list, batch_list)
-        return grad_X, None, None, None
-
-
 class Gather_Transpose_dual_Function(torch.autograd.Function):
     @staticmethod
     def forward(ctx: Any, src: Tensor, M_list: list[int], N0, N1, n0, n1, N1_offset1, N1_offset2):
@@ -51,12 +38,6 @@ class Scatter_Transpose_dual_Function(torch.autograd.Function):
         M_list, N0, N1, n0, n1, N1_offset1, N1_offset2 = ctx.extras_shape
         grad_src1, grad_src2 = dmove.gather_transpose_dual(grad_out.contiguous(), M_list, N0, N1, n0, n1, N1_offset1, N1_offset2)
         return grad_src1, grad_src2, None, None, None, None, None, None, None
-
-
-def batched_transpose_2D(
-    X: Tensor, M_list: list[int], N_list: list[int], batch_list: list[int]
-) -> Tensor:
-    return Batched_Transpose_2D_Function.apply(X, M_list, N_list, batch_list)
 
 
 def gather_transpose_dual(

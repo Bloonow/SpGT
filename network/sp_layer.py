@@ -5,7 +5,8 @@ from torch import Tensor
 from SpGT.extension.bind.galerkin import multihead_projection_with_position_rrc_cuda
 from SpGT.extension.bind.galerkin import multihead_projection_layernorm_with_position_rrc_cuda
 from SpGT.extension.bind.galerkin import multihead_galerkin_attention_cccr_cuda
-from SpGT.extension.bind.dmove import batched_transpose_2D, gather_transpose_dual, scatter_transpose_dual
+from SpGT.extension.bind.dmove import gather_transpose_dual, scatter_transpose_dual
+from SpGT.extension.bind.datamove import batched_transpose
 from SpGT.network.layer import FeedForward
 
 
@@ -133,7 +134,7 @@ class Sp_SpectralConv2D(torch.nn.Module):
         X = torch.nn.functional.dropout(X, p=self.droprate)
 
         # X : [N, r, r, in_dim]
-        X = batched_transpose_2D(X, [r, r], [in_dim,], [N,])
+        X = batched_transpose(X, [N,], [r, r], [in_dim,])
         # X : [N, in_dim, r, r]
         X_ft = torch.fft.rfft2(X, s=(r, r), norm='ortho')
         X_ft_positive, X_ft_negative = gather_transpose_dual(
@@ -149,7 +150,7 @@ class Sp_SpectralConv2D(torch.nn.Module):
         # Out_ft : [N, out_dim, r, r // 2 + 1]
         X = torch.fft.irfft2(Out_ft, s=(r, r), norm='ortho')
         # X : [N, out_dim, r, r]
-        X = batched_transpose_2D(X, [out_dim,], [r, r], [N,])
+        X = batched_transpose(X, [N,], [out_dim,], [r, r])
         # X : [N, r, r, out_dim]
 
         X = self.activation_layer(X + res)

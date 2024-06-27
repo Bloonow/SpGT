@@ -1,17 +1,16 @@
 #pragma once
-
 #include <cuda.h>
 #include <cuComplex.h>
-#include "utils.cu"
+#include "buffer.cu"
 
 namespace datamove {
-__global__ void batched_transpose_2D_16x16(
+
+__global__ void batched_transpose_16x16(
     const float *ld_ptr, float *st_ptr, const int M, const int N, const int stride
 ) {
-    float *smem_buf = SharedMemory<float, 16 * 16>().pointer();  // + 16 以避免 bank 冲突，提升不大
+    float *smem_buf = buffer::SharedMemory<float, 16 * 16>().pointer();
     const int brid = blockIdx.x / ((N + 15) / 16);
     const int bcid = blockIdx.x % ((N + 15) / 16);
-
     int baseX, baseY;
     float reg;  // 存储线程所搬运的值
 
@@ -24,7 +23,6 @@ __global__ void batched_transpose_2D_16x16(
     *reinterpret_cast<float*>(smem_buf + threadIdx.y * 16 + threadIdx.x) = reg;
     __syncthreads();
     reg = *reinterpret_cast<float*>(smem_buf + threadIdx.x * 16 + threadIdx.y);
-
     baseX = brid * 16 + threadIdx.x;  // 向下增长
     baseY = bcid * 16 + threadIdx.y;  // 向右增长
     if ((baseX < M) && (baseY < N)) {
@@ -33,10 +31,20 @@ __global__ void batched_transpose_2D_16x16(
     }
 }
 
+/// [batch, M, N] --> [batch, N, M]
+__host__ void batched_transpose_cuda(
+    const float *ld_ptr, float *st_ptr, const int M, const int N, const int stride, const int batchCount
+) {
+    const dim3 block_size(16, 16, 1);
+    // 为避免 M,N 太大时导致超出 blockIdx.y 的上界，此处使用 blockIdx.x 平铺线程块
+    const dim3 grid_size(((N + 15) / 16) * ((M + 15) / 16), 1, batchCount);
+    batched_transpose_16x16<<<grid_size, block_size>>>(ld_ptr, st_ptr, M, N, stride);
+}
+
 __global__ void gather_transpose_2D_16x16(
     const cuComplex *ld_ptr, cuComplex *st_ptr, const int M, const int N0, const int N1, const int n0, const int n1
 ) {
-    cuComplex *smem_buf = SharedMemory<cuComplex, 16 * 16>().pointer();
+    cuComplex *smem_buf = buffer::SharedMemory<cuComplex, 16 * 16>().pointer();
     const int brid = blockIdx.y;
     const int bcid = blockIdx.x;
     int baseX, baseY;
@@ -64,7 +72,7 @@ __global__ void gather_transpose_2D_16x16(
 __global__ void scatter_transpose_2D_16x16(
     const cuComplex *ld_ptr, cuComplex *st_ptr, const int M, const int N0, const int N1, const int n0, const int n1
 ) {
-    cuComplex *smem_buf = SharedMemory<cuComplex, 16 * 16>().pointer();
+    cuComplex *smem_buf = buffer::SharedMemory<cuComplex, 16 * 16>().pointer();
     const int brid = blockIdx.y;
     const int bcid = blockIdx.x;
     int baseX, baseY;
@@ -92,7 +100,7 @@ __global__ void scatter_transpose_2D_16x16(
 __global__ void batched_gather_transpose_2D_16x16(
     const float *ld_ptr, float *st_ptr, const int M1, const int M0, const int N, const int m0
 ) {
-    float *smem_buf = SharedMemory<float, 16 * 16>().pointer();  // + 16 以避免 bank 冲突，提升不大
+    float *smem_buf = buffer::SharedMemory<float, 16 * 16>().pointer();  // + 16 以避免 bank 冲突，提升不大
     const int brid = blockIdx.y;
     const int bcid = blockIdx.x;
     int baseX, baseY;
@@ -114,16 +122,6 @@ __global__ void batched_gather_transpose_2D_16x16(
     if ((baseX < M1 * m0) && (baseY < N)) {
         *reinterpret_cast<float*>(st_ptr + blockIdx.z * (M1 * m0 * N) + baseY * M1 * m0 + baseX) = reg;
     }
-}
-
-/* [batch, M, N] --> [batch, N, M] */
-__host__ void batched_transpose_2D_cuda(
-    const float *ld_ptr, float *st_ptr, const int M, const int N, const int stride, const int batchCount
-) {
-    const dim3 block_size(16, 16, 1);
-    // 为避免 M,N 太大时导致超出 blockIdx.y 的上界，此处使用 blockIdx.x 平铺线程块
-    const dim3 grid_size(((N + 15) / 16) * ((M + 15) / 16), 1, batchCount);
-    batched_transpose_2D_16x16<<<grid_size, block_size>>>(ld_ptr, st_ptr, M, N, stride);
 }
 
 /* [M, N1, N0] --> [M, :n1, :n0] --> [n1, n0, M] */

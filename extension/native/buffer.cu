@@ -1,7 +1,7 @@
 #pragma once
 #include <cuComplex.h>
 
-namespace SpGT {
+namespace buffer {
 
 template <typename Type, int num_datum> struct SharedMemory;
 template <int num_datum> struct SharedMemory<float, num_datum> {
@@ -16,7 +16,6 @@ template <int num_datum> struct SharedMemory<cuComplex, num_datum> {
         return reinterpret_cast<cuComplex*>(__shared_memory__);
     }
 };
-
 
 // #define GLOBAL_BUFFER_MESSAGE
 class GlobalBuffer {
@@ -66,4 +65,4 @@ public:
     size_t bytes() { return _bytes; }
 };
 
-} // namespace SpGT
+} // namespace buffer
