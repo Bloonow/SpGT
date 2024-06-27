@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import LRScheduler
 from SpGT.common.path import TIME_PATH
 from SpGT.common.trivial import UnitGaussianNormalizer, caller_name, get_daytime_string, get_down_up_size, timize
 from SpGT.engine.metric import WeightedL2Loss2D
-from SpGT.exts.bind.galerkin import galattn_cccr_cuda, projpos_lnorm_rrc_cuda, projpos_rrc_cuda
+from SpGT.extension.bind.galerkin import galattn_cccr_cuda, projpos_lnorm_rrc_cuda, projpos_rrc_cuda
 from SpGT.module.layer import SimpleAttention
 from SpGT.module.model import GalerkinTransformer2D, SimpleEncoderLayer
 from SpGT.module.model_exts import GalerkinTransformer2D_Exts

@@ -1,8 +1,8 @@
-from SpGT.timeit.sp_darcy_ablation import time_darcy_ablation_wrt_batch, time_darcy_ablation_wrt_resolution
-from SpGT.timeit.sp_darcy_breakdown import time_darcy_breakdown_wrt_batch, time_darcy_breakdown_wrt_resolution
-from SpGT.timeit.sp_fno2d import time_fno2d_wrt_batch, time_fno2d_wrt_resolution
-from SpGT.timeit.sp_galerkin import time_projpos_lnorm_wrt_batch, time_projpos_lnorm_wrt_resolution
-from SpGT.timeit.sp_galerkin import time_skinny_gemm_wrt_batch, time_skinny_gemm_wrt_resolution
+from SpGT.evaluate.sp_darcy_ablation import time_darcy_ablation_wrt_batch, time_darcy_ablation_wrt_resolution
+from SpGT.evaluate.sp_darcy_breakdown import time_darcy_breakdown_wrt_batch, time_darcy_breakdown_wrt_resolution
+from SpGT.evaluate.sp_fno2d import time_fno2d_wrt_batch, time_fno2d_wrt_resolution
+from SpGT.evaluate.sp_galerkin import time_projpos_lnorm_wrt_batch, time_projpos_lnorm_wrt_resolution
+from SpGT.evaluate.sp_galerkin import time_skinny_gemm_wrt_batch, time_skinny_gemm_wrt_resolution
 
 
 def time_all():

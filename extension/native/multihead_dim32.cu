@@ -2,8 +2,6 @@
 #include <cuda.h>
 #include "buffer.cu"
 
-namespace SpGT {
-
 namespace position {
 __global__ void add_pos2d_rc_256x2_1x2(
     const float *pos, float *head, const int M, const int n_head
@@ -620,5 +618,3 @@ __host__ void lnorm_grad_ccc_cuda(
 }
 
 } // namespace mh32 
-
-} // namespace SpGT

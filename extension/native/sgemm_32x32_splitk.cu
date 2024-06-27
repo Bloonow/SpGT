@@ -661,7 +661,8 @@ __global__ void reduce_kernel(
 
 __host__ void sgemm_cuda(
     const float *A, const float *B, float *C, const float alpha,
-    const uint32_t M, const uint32_t N, const uint32_t K, const uint32_t aS, const uint32_t bS, const uint32_t cS,
+    const uint32_t M, const uint32_t N, const uint32_t K,
+    const uint32_t aS, const uint32_t bS, const uint32_t cS,
     const GEMM_Order order, const uint32_t batchCount
 ) {
     uint32_t split_len = 64;  // 每个划分的长度

@@ -1,9 +1,9 @@
 #include <torch/extension.h>
 #include "../native/multihead_dim32.cu"
-#include "../native/matmul.cu"
+#include "../native/sgemm_32x32.cu"
+#include "../native/sgemm_32x32_splitk.cu"
 #include "../native/datamove.cu"
 
-namespace exts {
 using Tensor = torch::Tensor;
 
 Tensor mh32_projpos_rrc_forward(
@@ -13,10 +13,10 @@ Tensor mh32_projpos_rrc_forward(
 ) {
     torch::TensorOptions opts = input.options();
     Tensor out = torch::empty({batch, n_head, d_pos + d_k, seqlen}, opts);
-    SpGT::mh32::sgemm_rrc_cuda(
-        input.data_ptr<float>(), weight.data_ptr<float>(), out.data_ptr<float>(), 1.F, bias.data_ptr<float>(),
+    mh32::sgemm_rrc_cuda(
+        input.data_ptr<float>(), weight.data_ptr<float>(), out.data_ptr<float>(), 1.0, bias.data_ptr<float>(),
         seqlen, d_model, d_model, seqlen * d_model, 0, seqlen * n_head * (d_pos + d_k),
-        NULL, NULL, NULL, 0.F, 0,
+        NULL, NULL, NULL, 0.0, 0,
         pos.data_ptr<float>(), d_pos,
         batch
     );
@@ -55,8 +55,8 @@ std::tuple<Tensor,Tensor> mh32_projpos_lnorm_rrc_forward(
     torch::TensorOptions opts = input.options();
     Tensor hat_out = torch::empty({batch, n_head, d_pos + d_k, seqlen}, opts);
     Tensor invsigma = torch::empty({batch, n_head, seqlen}, opts);
-    SpGT::mh32::sgemm_rrc_cuda(
-        input.data_ptr<float>(), weight.data_ptr<float>(), hat_out.data_ptr<float>(), 1.F, bias.data_ptr<float>(),
+    mh32::sgemm_rrc_cuda(
+        input.data_ptr<float>(), weight.data_ptr<float>(), hat_out.data_ptr<float>(), 1.0, bias.data_ptr<float>(),
         seqlen, d_model, d_model, seqlen * d_model, 0, seqlen * n_head * (d_pos + d_k),
         lnw.data_ptr<float>(), lnb.data_ptr<float>(), invsigma.data_ptr<float>(), norm_eps, seqlen * n_head,
         pos.data_ptr<float>(), d_pos,
@@ -77,7 +77,7 @@ std::tuple<Tensor,Tensor,Tensor,Tensor,Tensor> mh32_projpos_lnorm_rrc_backward(
     Tensor grad_out = torch::empty({batch, seqlen, d_model}, opts);      // Without Position
     Tensor grad_lnw = torch::empty({n_head, d_k}, opts);
     Tensor grad_lnb = torch::empty({n_head, d_k}, opts);
-    SpGT::mh32::lnorm_grad_ccc_cuda(
+    mh32::lnorm_grad_ccc_cuda(
         grad_ln.data_ptr<float>(), hat_ln.data_ptr<float>(), invsigma.data_ptr<float>(), lnw.data_ptr<float>(), lnb.data_ptr<float>(),
         grad_out_col.data_ptr<float>(), grad_lnw.data_ptr<float>(), grad_lnb.data_ptr<float>(), 
         seqlen, d_model, seqlen * n_head * (d_pos + d_k), seqlen * n_head, seqlen * d_model, d_pos,
@@ -106,12 +106,12 @@ Tensor mh32_galattn_cccr_forward(
     float *tmp_ptr = tmp.data_ptr<float>();
 
     sgemm_32x32_4x8_SplitK::sgemm_cuda(
-        K.data_ptr<float>(), V.data_ptr<float>(), tmp_ptr, (1.F / seqlen),
+        K.data_ptr<float>(), V.data_ptr<float>(), tmp_ptr, (1.0 / seqlen),
         d_posk, d_posk, seqlen, d_posk * seqlen, seqlen * d_posk, d_posk * d_posk,
         GEMM_Order::RCC, batch * n_head
     );
     sgemm_32x32_4x4::sgemm_cuda(
-        Q.data_ptr<float>(), tmp_ptr, output.data_ptr<float>(), 1.F,
+        Q.data_ptr<float>(), tmp_ptr, output.data_ptr<float>(), 1.0,
         seqlen, d_posk, d_posk, seqlen * d_posk, d_posk * d_posk, seqlen * d_posk,
         GEMM_Order::CCR, batch * n_head
     );
@@ -135,32 +135,32 @@ std::tuple<Tensor, Tensor, Tensor> mh32_galattn_cccr_backward(
     float *tmp_ptr = tmp.data_ptr<float>();
 
     sgemm_32x32_4x8_SplitK::sgemm_cuda(
-        v_ptr, k_ptr, tmp_ptr, (1.F / seqlen),
+        v_ptr, k_ptr, tmp_ptr, (1.0 / seqlen),
         d_posk, d_posk, seqlen, d_posk * seqlen, seqlen * d_posk, d_posk * d_posk,
         GEMM_Order::RCC, batch * n_head
     );
     sgemm_32x32_4x4::sgemm_cuda(
-        grad_ptr, tmp_ptr, grad_Q.data_ptr<float>(), 1.F, 
+        grad_ptr, tmp_ptr, grad_Q.data_ptr<float>(), 1.0, 
         seqlen, d_posk, d_posk, seqlen * d_posk, d_posk * d_posk, seqlen * d_posk,
         GEMM_Order::RCC, batch * n_head
     );
     sgemm_32x32_4x8_SplitK::sgemm_cuda(
-        grad_ptr, q_ptr, tmp_ptr, (1.F / seqlen),
+        grad_ptr, q_ptr, tmp_ptr, (1.0 / seqlen),
         d_posk, d_posk, seqlen, d_posk * seqlen, seqlen * d_posk, d_posk * d_posk,
         GEMM_Order::CCC, batch * n_head
     );
     sgemm_32x32_4x4::sgemm_cuda(
-        v_ptr, tmp_ptr, grad_K.data_ptr<float>(), 1.F, 
+        v_ptr, tmp_ptr, grad_K.data_ptr<float>(), 1.0, 
         seqlen, d_posk, d_posk, seqlen * d_posk, d_posk * d_posk, seqlen * d_posk,
         GEMM_Order::CCC, batch * n_head
     );
     sgemm_32x32_4x8_SplitK::sgemm_cuda(
-        q_ptr, grad_ptr, tmp_ptr, (1.F / seqlen),
+        q_ptr, grad_ptr, tmp_ptr, (1.0 / seqlen),
         d_posk, d_posk, seqlen, d_posk * seqlen, seqlen * d_posk, d_posk * d_posk,
         GEMM_Order::RRC, batch * n_head
     );
     sgemm_32x32_4x4::sgemm_cuda(
-        k_ptr, tmp_ptr, grad_V.data_ptr<float>(), 1.F, 
+        k_ptr, tmp_ptr, grad_V.data_ptr<float>(), 1.0, 
         seqlen, d_posk, d_posk, seqlen * d_posk, d_posk * d_posk, seqlen * d_posk,
         GEMM_Order::CCC, batch * n_head
     );
@@ -192,14 +192,12 @@ Tensor batched_skinny_gemm(
     return std::move(C);
 }
 
-} // namespace exts
-
 PYBIND11_MODULE(galerkin, m) {
-    m.def("mh32_projpos_rrc_forward", &exts::mh32_projpos_rrc_forward, "mh32_projpos_rrc_forward");
-    m.def("mh32_projpos_rrc_backward", &exts::mh32_projpos_rrc_backward, "mh32_projpos_rrc_backward");
-    m.def("mh32_projpos_lnorm_rrc_forward", &exts::mh32_projpos_lnorm_rrc_forward, "mh32_projpos_lnorm_rrc_forward");
-    m.def("mh32_projpos_lnorm_rrc_backward", &exts::mh32_projpos_lnorm_rrc_backward, "mh32_projpos_lnorm_rrc_backward");
-    m.def("mh32_galattn_cccr_forward", &exts::mh32_galattn_cccr_forward, "mh32_galattn_cccr_forward");
-    m.def("mh32_galattn_cccr_backward", &exts::mh32_galattn_cccr_backward, "mh32_galattn_cccr_backward");
-    m.def("batched_skinny_gemm", &exts::batched_skinny_gemm, "batched_skinny_gemm");
+    m.def("mh32_projpos_rrc_forward", &mh32_projpos_rrc_forward, "mh32_projpos_rrc_forward");
+    m.def("mh32_projpos_rrc_backward", &mh32_projpos_rrc_backward, "mh32_projpos_rrc_backward");
+    m.def("mh32_projpos_lnorm_rrc_forward", &mh32_projpos_lnorm_rrc_forward, "mh32_projpos_lnorm_rrc_forward");
+    m.def("mh32_projpos_lnorm_rrc_backward", &mh32_projpos_lnorm_rrc_backward, "mh32_projpos_lnorm_rrc_backward");
+    m.def("mh32_galattn_cccr_forward", &mh32_galattn_cccr_forward, "mh32_galattn_cccr_forward");
+    m.def("mh32_galattn_cccr_backward", &mh32_galattn_cccr_backward, "mh32_galattn_cccr_backward");
+    m.def("batched_skinny_gemm", &batched_skinny_gemm, "batched_skinny_gemm");
 }
