@@ -5,8 +5,7 @@ from torch import Tensor
 from SpGT.extension.bind.galerkin import multihead_projection_with_position_rrc_cuda
 from SpGT.extension.bind.galerkin import multihead_projection_layernorm_with_position_rrc_cuda
 from SpGT.extension.bind.galerkin import multihead_galerkin_attention_cccr_cuda
-from SpGT.extension.bind.dmove import gather_transpose_dual, scatter_transpose_dual
-from SpGT.extension.bind.datamove import batched_transpose
+from SpGT.extension.bind.datamove import batched_transpose, transpose_gather_dual, transpose_scatter_dual
 from SpGT.network.layer import FeedForward
 
 
@@ -137,15 +136,15 @@ class Sp_SpectralConv2D(torch.nn.Module):
         X = batched_transpose(X, [N,], [r, r], [in_dim,])
         # X : [N, in_dim, r, r]
         X_ft = torch.fft.rfft2(X, s=(r, r), norm='ortho')
-        X_ft_positive, X_ft_negative = gather_transpose_dual(
-            X_ft, [N, in_dim], r // 2 + 1, r, m, m, N1_offset1=0, N1_offset2=r-m
+        X_ft_0, X_ft_1 = transpose_gather_dual(
+            X_ft, [N, in_dim], r, r // 2 + 1, m, m, 0, 0, r-m, 0
         )
-        # Out_ft_positive = X_ft_positive @ self.fourier_weight[0]
-        # Out_ft_negative = X_ft_negative @ self.fourier_weight[1]
-        Out_ft_positive = X_ft_positive @ torch.view_as_complex(self.fourier_weight[0])
-        Out_ft_negative = X_ft_negative @ torch.view_as_complex(self.fourier_weight[1])
-        Out_ft = scatter_transpose_dual(
-            Out_ft_positive, Out_ft_negative, [N, out_dim], r // 2 + 1, r, m, m, N1_offset1=0, N1_offset2=r-m
+        # Out_ft_0 = X_ft_0 @ self.fourier_weight[0]
+        # Out_ft_1 = X_ft_1 @ self.fourier_weight[1]
+        Out_ft_0 = X_ft_0 @ torch.view_as_complex(self.fourier_weight[0])
+        Out_ft_1 = X_ft_1 @ torch.view_as_complex(self.fourier_weight[1])
+        Out_ft = transpose_scatter_dual(
+            Out_ft_0, Out_ft_1, [N, out_dim], r, r // 2 + 1, m, m, 0, 0, r-m, 0
         )
         # Out_ft : [N, out_dim, r, r // 2 + 1]
         X = torch.fft.irfft2(Out_ft, s=(r, r), norm='ortho')
