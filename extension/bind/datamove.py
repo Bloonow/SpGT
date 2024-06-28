@@ -5,7 +5,7 @@ import torch.utils.cpp_extension
 from torch import Tensor
 from SpGT.common.path import EXTENSION_PATH
 
-exts = torch.utils.cpp_extension.load(
+dexts = torch.utils.cpp_extension.load(
     'datamove', os.path.join(EXTENSION_PATH, 'bind', 'datamove.cu'), verbose=True
 )
 
@@ -14,12 +14,12 @@ class Batched_Transpose_Function(torch.autograd.Function):
     @staticmethod
     def forward(ctx: Any, X: Tensor, batch_list: list[int], M_list: list[int], N_list: list[int]):
         ctx.extras_shape = [batch_list, M_list, N_list]
-        return exts.batched_transpose(X, batch_list, M_list, N_list)
+        return dexts.batched_transpose(X, batch_list, M_list, N_list)
 
     @staticmethod
     def backward(ctx: Any, grad_out: Tensor):
         batch_list, M_list, N_list = ctx.extras_shape
-        grad_X = exts.batched_transpose(grad_out.contiguous(), batch_list, N_list, M_list)
+        grad_X = dexts.batched_transpose(grad_out.contiguous(), batch_list, N_list, M_list)
         return grad_X, None, None, None
 
 
@@ -29,7 +29,7 @@ class Transpose_Gather_Dual_Function(torch.autograd.Function):
         ctx: Any, src: Tensor, dim_list: list[int], H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2
     ):
         ctx.extras_shape = [dim_list, H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2]
-        out1, out2 = exts.transpose_gather_dual(
+        out1, out2 = dexts.transpose_gather_dual(
             src, dim_list, H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2
         )
         return out1, out2
@@ -37,7 +37,7 @@ class Transpose_Gather_Dual_Function(torch.autograd.Function):
     @staticmethod
     def backward(ctx: Any, grad_out1: Tensor, grad_out2: Tensor):
         dim_list, H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2 = ctx.extras_shape
-        grad_src = exts.transpose_scatter_dual(
+        grad_src = dexts.transpose_scatter_dual(
             grad_out1.contiguous(), grad_out2.contiguous(),
             dim_list, H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2
         )
@@ -51,7 +51,7 @@ class Transpose_Scatter_Dual_Function(torch.autograd.Function):
         H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2
     ):
         ctx.extras_shape = [dim_list, H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2]
-        out = exts.transpose_scatter_dual(
+        out = dexts.transpose_scatter_dual(
             src1, src2, dim_list, H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2
         )
         return out
@@ -59,7 +59,7 @@ class Transpose_Scatter_Dual_Function(torch.autograd.Function):
     @staticmethod
     def backward(ctx: Any, grad_out: Tensor):
         dim_list, H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2 = ctx.extras_shape
-        grad_src1, grad_src2 = exts.transpose_gather_dual(
+        grad_src1, grad_src2 = dexts.transpose_gather_dual(
             grad_out.contiguous(), dim_list, H_all, W_all, H_low, W_low, H_base_1, W_base_1, H_base_2, W_base_2
         )
         return grad_src1, grad_src2, None, None, None, None, None, None, None, None, None

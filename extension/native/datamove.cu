@@ -1,7 +1,7 @@
 #pragma once
 #include <cuda.h>
 #include <cuComplex.h>
-#include "buffer.cu"
+#include "../utils/buffer.cu"
 
 namespace datamove {
 

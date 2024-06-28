@@ -2,9 +2,9 @@ import math
 import torch
 from torch import Tensor
 
-from SpGT.extension.bind.galerkin import multihead_projection_with_position_rrc_cuda
-from SpGT.extension.bind.galerkin import multihead_projection_layernorm_with_position_rrc_cuda
-from SpGT.extension.bind.galerkin import multihead_galerkin_attention_cccr_cuda
+from SpGT.extension.bind.galerkin_attention import multihead_projection_with_position_rrc_cuda
+from SpGT.extension.bind.galerkin_attention import multihead_projection_layernorm_with_position_rrc_cuda
+from SpGT.extension.bind.galerkin_attention import multihead_galerkin_attention_cccr_cuda
 from SpGT.extension.bind.datamove import batched_transpose, transpose_gather_dual, transpose_scatter_dual
 from SpGT.network.layer import FeedForward
 

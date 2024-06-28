@@ -1,8 +1,8 @@
 #pragma once
 #include <cuda.h>
-#include "ptx.cu"
-#include "buffer.cu"
-#include "gemm_utils.cu"
+#include "../utils/ptx.cu"
+#include "../utils/buffer.cu"
+#include "../utils/gemm_utils.cu"
 
 namespace sgemm_32x32_4x8_SplitK {
 

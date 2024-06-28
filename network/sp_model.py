@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-from SpGT.network.layer import ConvResBlock2D, EncoderLayer, FeedForward, SpectralConv2D
+from SpGT.network.layer import FeedForward
 from SpGT.network.model import DownScaler2D, UpScaler2D
 from SpGT.network.sp_layer import Sp_EncoderLayer, Sp_SpectralConv2D
 
@@ -105,7 +105,6 @@ class Sp_GalerkinTransformer2D(torch.nn.Module):
         # X : [N, r, r, dim_hidden]
         X = self.decoder_regressor(X, grid)
         # X : [N, r, r, dim_target]
-        # TODO 踢出去
         # 后续逆归一化与边界条件
         X = self.normalizer.inverse_transform(X)
         if self.boundary_condition == 'dirichlet':

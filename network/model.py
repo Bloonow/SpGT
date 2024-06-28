@@ -164,7 +164,6 @@ class GalerkinTransformer2D(torch.nn.Module):
         # X : [N, r, r, dim_hidden]
         X = self.decoder_regressor(X, grid)
         # X : [N, r, r, dim_target]
-        # TODO 踢出去
         # 后续逆归一化与边界条件
         X = self.normalizer.inverse_transform(X)
         if self.boundary_condition == 'dirichlet':

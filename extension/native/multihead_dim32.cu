@@ -1,6 +1,6 @@
 #pragma once
 #include <cuda.h>
-#include "buffer.cu"
+#include "../utils/buffer.cu"
 
 namespace position {
 __global__ void add_pos2d_rc_256x2_1x2(
