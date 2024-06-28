@@ -1,70 +1,123 @@
-# 代码组织结构
-
-需要注意的是，项目SpGT的根目录需要位于Python解释器的搜索路径当中，假设SpGT项目位于/path/to/SpGT路径。
-
-可以在Python解释器的site-packages目录下创建mypath.pth文件，并添加项目路径如下（一行指定一个路径）。
+# Code Organization
 
 ```
-/path/to
-```
-
-也可以在所执行Python脚本的最开始位置添加如下代码。
-
-```python
-import sys
-sys.path.append('/path/to')
-```
-
-```shell
 SpGT
 ├── common
-│   ├── path.py                 # 项目路径配置，所有组件都从此文件中获取路径配置
-│   └── trivial.py              # 提供各种琐碎功能实现
+│   ├── path.py                    # Project path configuration, all components obtain path configuration from this file
+│   └── trivial.py                 # Provide various trivial functions for implementation
 ├── storage
-│   ├── data                    # 符号链接，指向数据集存储目录
-│   ├── model                   # 符号链接，指向模型的存储目录
-│   └── evaluation              # 评估结果的存放目录
+│   ├── data                       # Symbolic link pointing to the dataset storage directory
+│   ├── model                      # Symbolic link pointing to the trained model storage directory
+│   ├── evaluation                 # Directory for storing evaluation results
+│   └── visualization              # Visualization images of experimental results
 ├── config
-│   ├── config_accessor.py      # 配置文件的访问器
-│   └── darcy_config.yaml       # Darcy问题的配置文件
+│   ├── config_accessor.py         # Access to configuration files
+│   └── darcy_config.yaml          # Configuration file for Darcy problem
 ├── dataset
-│   ├── data_accessor.py        # 数据文件的访问器
-│   ├── darcy_dataset.py        # Darcy问题的数据集类
-│   └── darcy_generate          # 生成Darcy问题所需数据的Matlab代码
+│   ├── data_accessor.py           # Access to data files
+│   ├── darcy_dataset.py           # Dataset classes for the Darcy problem
+│   └── darcy_generate             # Matlab code for generating the data required for the Darcy problem
 ├── network
-│   ├── layer.py                # 神经网络模型的各种层的实现
-│   ├── model.py                # 所构建的神经网络模块
-│   ├── sp_layer.py             # 神经网络模型的各种层的实现，优化加速版本
-│   └── sp_model.py             # 所构建的神经网络模块，优化加速版本
+│   ├── layer.py                   # Implementation of various layers in neural network models
+│   ├── model.py                   # The constructed neural network module
+│   ├── sp_layer.py                # Implementation of various layers of neural network models, optimized and accelerated versions
+│   └── sp_model.py                # The constructed neural network module, optimized and accelerated versions
 ├── extension
-│   ├── native                  # CUDA/C++层面的优化工作
-│   └── bind                    # 对CUDA/C++进行封装，提供PyTorch层面的API接口
+│   ├── native                     # Optimization at the CUDA/C++level
+│   └── bind                       # Encapsulate CUDA/C++ and provide PyTorch level API
 ├── engine
-│   ├── metric.py               # 损失函数与评估指标
-│   ├── train.py                # 总体的训练过程，在给定数量的epoch上迭代
-│   └── darcy_engine.py         # Darcy问题的，一轮epoch的训练或推理过程
+│   ├── metric.py                  # Loss function and metrices
+│   ├── train.py                   # The training process iterates on a given number of epochs
+│   └── darcy_engine.py            # The training or inference process of one epoch for the Darcy problem
 ├── run
-│   ├── darcy_train.py          # Darcy模型的训练
-│   ├── darcy_inference.py      # Darcy模型的推理
-│   ├── ddp_darcy_train.py      # Darcy模型的训练，使用DDP框架
-│   └── ddp_darcy_train.py  # Darcy模型的推理，使用DDP框架
-├── evaluate                    # 针对优化工作的各种评估
-└── visualize                   # 评估结果的可视化
+│   ├── darcy_train.py             # Training of Darcy Model
+│   ├── darcy_inference.py         # Inference of Darcy Model
+│   ├── ddp_darcy_train_strong.py  # Training of Darcy model, using the DDP framework
+│   └── ddp_darcy_inference.py     # Inference of Darcy Model, using the DDP framework
+├── evaluate                       # Various evaluations for optimizations
+└── visualize                      # Visualization of evaluation results
 ```
 
-# 模块与类的设计思路
+# Prerequisites and Datasets
 
-配置参数由__init__()函数全部指定，但类对象仅存储需要在别处使用的配置参数。
+The primary software environment includes: Python 3.9, CUDA 11.8 (including cuBLAS and cuDNN libraries), 
+and PyTorch 2.1.0.
 
-# 命名规范
+Generally speaking, the optimization work in this paper is not heavily dependent on specific software versions, 
+but differences in implementation efficiency across versions may affect optimization outcomes.
 
-以`Sp_`前缀开始，标识各种模块的优化版本。
+Fetch the latest release version from this repository and place the code under a 
+directory. Ensure that the top-level directory of the project is named SpGT and the path to the project is in 
+the Python interpreter's search path. 
 
-批量瘦长矩阵乘法的多级并行SliceK-SplitK-ReduceK策略
-Multilevel parallel (SliceK-SplitK-ReduceK) strategy for batched skinny matrix multiplication
+To ensure the correct path, we use ROOT_PATH in the SpGT/common/path.py script to specify the path of the 
+project's top-level directory (i.e., the path of SpGT). Users can modify this path.
 
-QKV矩阵与位置编码的内存布局优化，与多头层归一化融合
-memory layout optimization for QKV matrices and positional encodings, multi-head layer normalization fusion
+To avoid excessive repository size, we store the dataset files and trained models outside the project and use 
+symbolic links to point to the actual resource directories. Before running the scripts, users need to create symbolic 
+links named SpGT/storage/data and SpGT/storage/model, pointing to the directories where the dataset and trained models 
+are actually stored, respectively.
 
-批量转置的跨步聚集和分散优化
-batched transposition optimization with strided scattering and gathering
+Use the SpGT/dataset/darcy_generate/gen.m file to generate the necessary dataset. If you choose to use the 
+downloaded $421\times421$ resolution dataset, you can skip this step.
+
+To generate the required Darcy equation dataset, run the SpGT/dataset/darcy_generate/gen.m script using MATLAB. 
+The generated dataset will be stored in the same directory. You can use num_file to specify the number of files to 
+generate, num_data to specify the number of data points in each file, and S to specify the resolution of each data point.
+
+It is important to note that in the provided generation script, the coefficients and solutions of the equation are 
+labeled with 'a' and 'u', whereas the dataset provided by the FNO authors uses 'coeff' and 'sol' to label the 
+coefficients and solutions. The difference is only in naming, so be mindful of this when reading the data. 
+We have specified the correct key values in the corresponding code location, so use the appropriate keys as needed.
+
+# How To Use
+
+## Train and Inference
+
+Use the SpGT/run/darcy_train.py script to train the complete model, and use the SpGT/run/darcy_inference.py 
+script to perform inference with the trained model.
+
+The script SpGT/run/darcy_train.py is used to train the model. After the training is completed, the model will be 
+stored in the SpGT/storage/model directory. The training script first reads all configuration parameters, which are 
+specified in the SpGT/config/darcy_config.yaml file. Users can modify these configurations. Generally, the 
+configurations that need to be specified are as follows:
+
+- num_data: The number of sample points in the dataset.
+- fine_resolution: The resolution of each sample point in the dataset.
+- subsample_node: The sampling scale for the entire model, representing that every 
+$\texttt{subsample\_node}\times\texttt{subsample\_node}$ points from the fine_resolution are sampled as one data point.
+- subsample_attn: The sampling scale for the Galerkin Attention part of the model, with the same function 
+as subsample_node.
+- train_dataset and valid_dataset: The file names of the training dataset and validation dataset, respectively.
+- name_module: The name of the model used; specify GT to use the unoptimized model and SpGT to use the 
+optimized model.
+
+The script SpGT/run/darcy_inference.py uses the trained model for inference, with the model's checkpoint file name 
+specified. This allows verification of the model's solution accuracy. Additionally, the subsample_node and 
+subsample_attn parameters in the configuration file can be modified to perform inference at higher resolutions, 
+verifying the Fourier operator's ability to learn super-resolution.
+
+In the SpGT/run/ddp_sh directory, bash scripts are provided for submitting distributed training. These scripts require 
+cluster support with the Slurm distributed resource management and job scheduling system. They use Slurm commands to 
+submit distributed jobs, for example, sbatch --gpus=4 ddp_strong_gpu4.sh.
+
+## Evaluation
+
+Use various scripts in the SpGT/evaluate directory to perform comprehensive performance evaluations.
+
+In the SpGT/evaluate directory, several scripts are provided for comprehensive experimental evaluation of the proposed 
+optimization methods. You can directly run the SpGT/evaluate/sp_all.py script to execute all experimental evaluations. 
+The resolution_list specifies the resolutions to be tested, and the batch_list specifies the batch sizes to be tested. 
+The specified ranges are designed to fully utilize the 32GB memory of a V100 GPU. If you encounter out-of-memory errors 
+during execution, please reduce the test range.
+
+The experimental results will be written to the SpGT/storage/evaluation directory. Additionally, we provide a 
+SpGT/storage/evaluation/time.tgz file, which contains the results obtained from our experiments. These results are 
+also the data sources used in our paper.
+
+## Visualization
+
+Use the scripts in the SpGT/visualize/plot directory to visualize the experimental evaluation results.
+
+In the SpGT/visualize/plot directory, several plotting scripts are provided. These scripts use the matplotlib library 
+to visualize the experimental results and save the images to the SpGT/storage/visualization directory.
