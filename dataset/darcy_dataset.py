@@ -73,7 +73,10 @@ class DarcyDataset(torch.utils.data.dataset.Dataset):
     def _initialize(self):
         set_seed(self.random_seed, printout=False)
         with timer(f'Load {self.datapath.split(os.path.sep)[-1]}'):
+            # For generated Darcy dataset, the key name is ['a', 'u', 'a_mean', 'u_mean', 'a_std', 'u_std']
             a, u = read_matfile(self.datapath, ['a', 'u'], [np.float32, np.float32])
+            # For downloaded Darcy dataset, the key name is ['Kcoeff', 'Kcoeff_x', 'Kcoeff_y', 'coeff', 'sol']
+            # a, u = read_matfile(self.datapath, ['coeff', 'sol'], [np.float32, np.float32])
         N, R, R = a.shape
         self.num_data = assign(self.num_data, N)
         self.fine_resolution = assign(self.fine_resolution, R)
