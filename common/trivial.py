@@ -116,7 +116,7 @@ def caller_name():
     return call[: call.rfind('(')]
 
 
-def timize(func: Callable, desc: str, label: str, sublabel: str, min_run_time: float = 1.0, **kwargs):
+def timize(func: Callable, desc: str, label: str, sublabel: str, min_run_time: float = 10.0, **kwargs):
     func(**kwargs)  # warmup
     return torch.utils.benchmark.Timer(
         stmt='func(**kwargs)',
