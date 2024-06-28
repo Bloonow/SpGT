@@ -2,16 +2,17 @@ import os
 from typing import Callable
 import torch
 import torch.utils.benchmark as benchmark
-from SpGT.common.path import TIME_PATH
+from SpGT.common.path import EVALUATION_PATH
 from SpGT.common.trivial import caller_name, get_daytime_string, timize
-from SpGT.exts.bind.galerkin import batched_skinny_gemm
-from SpGT.exts.bind.galerkin import projpos_rrc_cuda, projpos_lnorm_rrc_cuda
-from SpGT.module.layer import SimpleAttention
+from SpGT.extension.bind.galerkin_attention import batched_skinny_gemm
+from SpGT.extension.bind.galerkin_attention import multihead_projection_with_position_rrc_cuda
+from SpGT.extension.bind.galerkin_attention import multihead_projection_layernorm_with_position_rrc_cuda
+from SpGT.network.layer import GalerkinAttention
 
-projpos_cuda:       Callable = projpos_rrc_cuda
-projpos_lnorm_cuda: Callable = projpos_lnorm_rrc_cuda
-projpos_orig:       Callable = SimpleAttention.projpos_orig
-projpos_lnorm_orig: Callable = SimpleAttention.projpos_lnorm_orig
+projpos_cuda:       Callable = multihead_projection_with_position_rrc_cuda
+projpos_lnorm_cuda: Callable = multihead_projection_layernorm_with_position_rrc_cuda
+projpos_orig:       Callable = GalerkinAttention.multihead_projection_with_position
+projpos_lnorm_orig: Callable = GalerkinAttention.multihead_projection_layernorm_with_position
 
 ################################
 
@@ -66,7 +67,7 @@ def time_skinny_gemm_wrt_resolution(
     msg += f'======== {hint} ========' + os.linesep
     msg += f'{str(compare)}' + os.linesep
     print('', msg, sep=os.linesep)
-    path = os.path.join(TIME_PATH, f'{hint}.txt')
+    path = os.path.join(EVALUATION_PATH, f'{hint}.txt')
     with open(path, mode='w+', encoding='utf=8') as f:
         f.write(msg)
 
@@ -121,7 +122,7 @@ def time_skinny_gemm_wrt_batch(
     msg += f'======== {hint} ========' + os.linesep
     msg += f'{str(compare)}' + os.linesep
     print('', msg, sep=os.linesep)
-    path = os.path.join(TIME_PATH, f'{hint}.txt')
+    path = os.path.join(EVALUATION_PATH, f'{hint}.txt')
     with open(path, mode='w+', encoding='utf=8') as f:
         f.write(msg)
 
@@ -216,7 +217,7 @@ def time_projpos_lnorm_wrt_resolution(
     msg += f'======== {hint} ========' + os.linesep
     msg += f'{str(compare)}' + os.linesep
     print('', msg, sep=os.linesep)
-    path = os.path.join(TIME_PATH, f'{hint}.txt')
+    path = os.path.join(EVALUATION_PATH, f'{hint}.txt')
     with open(path, mode='w+', encoding='utf=8') as f:
         f.write(msg)
 
@@ -311,6 +312,6 @@ def time_projpos_lnorm_wrt_batch(
     msg += f'======== {hint} ========' + os.linesep
     msg += f'{str(compare)}' + os.linesep
     print('', msg, sep=os.linesep)
-    path = os.path.join(TIME_PATH, f'{hint}.txt')
+    path = os.path.join(EVALUATION_PATH, f'{hint}.txt')
     with open(path, mode='w+', encoding='utf=8') as f:
         f.write(msg)
