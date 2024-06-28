@@ -50,7 +50,7 @@ def darcy_train(cfg):
     # 构建模型与训练配置
     torch.cuda.empty_cache()
     cfg['target_normalizer'] = target_normalizer.numpy_to_torch(device)
-    model = Sp_GalerkinTransformer2D(cfg)
+    model = GalerkinTransformer2D(cfg)
     model = model.to(device)
     print(f"\nThe Numbers of Model's Parameters: {get_num_params(model)}\n")
     epochs = cfg['epochs']
@@ -83,3 +83,6 @@ def darcy_train(cfg):
 if __name__ == '__main__':
     cfg = get_darcy_config()
     darcy_train(cfg=cfg)
+    # GT   time: 728.261673
+    # SpGT time: 443.733081
+    # Speedup  : 1.64
