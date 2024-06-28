@@ -66,5 +66,5 @@ def darcy_inference(cfg, checkpoint):
 
 if __name__ == '__main__':
     cfg = get_darcy_config()
-    checkpoint = torch.load(os.path.join(MODEL_PATH, 'SpGT_r141d128s12_0628_2228.pt'), map_location='cpu')
+    checkpoint = torch.load(os.path.join(MODEL_PATH, 'SpGT_r141d128m12_0628_2228.pt'), map_location='cpu')
     darcy_inference(cfg=cfg, checkpoint=checkpoint)
