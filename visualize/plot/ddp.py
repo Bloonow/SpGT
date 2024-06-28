@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from SpGT.common.path import TEMPOUT_PATH
+from SpGT.common.path import VISUALIZATION_PATH
 
 # 设置全局字体大小
 plt.rcParams.update({'font.size': 16, 'font.weight': 'bold'})
@@ -70,5 +70,5 @@ handles = [l1, l2, l3, l4,]
 labels = [h.get_label() for h in handles]
 plt.legend(handles, labels, loc='center', bbox_to_anchor=(0.5, 1.06), ncol=4, fontsize=12)
 
-plt.savefig(os.path.join(TEMPOUT_PATH, 'ddp_efficiency.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.savefig(os.path.join(VISUALIZATION_PATH, 'ddp_efficiency.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
 plt.show()

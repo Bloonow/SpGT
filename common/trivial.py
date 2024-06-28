@@ -2,6 +2,7 @@ from contextlib import contextmanager
 import datetime
 import math
 import os
+import sys
 from time import time
 import traceback
 from typing import Callable
@@ -126,6 +127,19 @@ def timize(func: Callable, desc: str, label: str, sublabel: str, min_run_time: f
         sub_label=sublabel,
         description=desc
     ).blocked_autorange(min_run_time=min_run_time)
+
+
+def distributed_initialize():
+    torch.distributed.init_process_group('nccl', init_method='env://')
+    if not torch.distributed.is_initialized():
+        print('Error: torch.distributed.is_initialized == False')
+        sys.exit()
+    world_size = torch.distributed.get_world_size()
+    my_rank = torch.distributed.get_rank()
+    if my_rank != 0:
+        sys.stdout, sys.stderr = None, None
+    print(f'======== world_size: {world_size} ========')
+    torch.cuda.set_device(my_rank)
 
 
 def is_main_process():

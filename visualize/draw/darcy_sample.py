@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import loadmat
 
-from SpGT.common.path import DATA_PATH, TEMPOUT_PATH
+from SpGT.common.path import DATA_PATH, VISUALIZATION_PATH
 
 # 设置全局字体大小
 plt.rcParams.update({'font.size': 24, 'font.weight': 'bold'})
@@ -44,5 +44,5 @@ for i, j in [(i, j) for i in range(2) for j in range(3)]:
     axs[i, j].yaxis.set_major_locator(plt.NullLocator())
 
 # 显示
-plt.savefig(os.path.join(TEMPOUT_PATH, 'darcy_sample.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.savefig(os.path.join(VISUALIZATION_PATH, 'darcy_sample.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
 plt.show()

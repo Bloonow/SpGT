@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from SpGT.common.path import TEMPOUT_PATH
+from SpGT.common.path import VISUALIZATION_PATH
 
 # 设置全局字体大小
 plt.rcParams.update({'font.size': 24})
@@ -105,5 +105,5 @@ handles = [b1, b2, b3, b4, l1, l2,]
 labels = [h.get_label() for h in handles]
 fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 0.98), ncol=6)
 
-plt.savefig(os.path.join(TEMPOUT_PATH, 'darcy_wrt.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.savefig(os.path.join(VISUALIZATION_PATH, 'darcy_wrt.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
 plt.show()

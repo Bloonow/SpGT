@@ -47,7 +47,7 @@ SpGT
 │   ├── darcy_train.py          # Darcy模型的训练
 │   ├── darcy_inference.py      # Darcy模型的推理
 │   ├── ddp_darcy_train.py      # Darcy模型的训练，使用DDP框架
-│   └── ddp_darcy_inference.py  # Darcy模型的推理，使用DDP框架
+│   └── ddp_darcy_train.py  # Darcy模型的推理，使用DDP框架
 ├── evaluate                    # 针对优化工作的各种评估
 └── visualize                   # 评估结果的可视化
 ```

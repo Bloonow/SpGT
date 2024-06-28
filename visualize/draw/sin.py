@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from SpGT.common.path import TEMPOUT_PATH
+from SpGT.common.path import VISUALIZATION_PATH
 
 num = 3
 x = np.linspace(0, 2 * np.pi, 1000)
@@ -17,5 +17,5 @@ for i in range(num):
     ax.plot(x, y, linewidth=5, color='red')
     ax.axis('off')
 
-plt.savefig(os.path.join(TEMPOUT_PATH, 'sin.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.savefig(os.path.join(VISUALIZATION_PATH, 'sin.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
 plt.show()

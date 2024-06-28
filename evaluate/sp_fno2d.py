@@ -2,11 +2,11 @@ import math
 import os
 import torch
 import torch.utils.benchmark as benchmark
-from SpGT.common.path import TIME_PATH
+from SpGT.common.path import EVALUATION_PATH
 from SpGT.common.trivial import caller_name, get_daytime_string, timize
 
-from SpGT.module.layer import SpectralConv2D
-from SpGT.module.layer_exts import SpectralConv2D_Exts
+from SpGT.network.layer import SpectralConv2D
+from SpGT.network.sp_layer import Sp_SpectralConv2D
 
 
 def time_fno2d_wrt_resolution(
@@ -19,8 +19,8 @@ def time_fno2d_wrt_resolution(
 
     # 生成数据辅助函数
     def gen_data(resolution, ModuleClz):
-        modes = math.ceil(math.sqrt(resolution))
-        model: torch.nn.Module = ModuleClz(in_dim, out_dim, modes=modes, droprate=0.)
+        mode = math.ceil(math.sqrt(resolution))
+        model: torch.nn.Module = ModuleClz(in_dim, out_dim, mode=mode, droprate=0.0, activation='silu')
         model = model.to(device)
         X = torch.rand([batch, resolution, resolution, in_dim], device=device, requires_grad=True)
         Y = model(X)
@@ -43,7 +43,7 @@ def time_fno2d_wrt_resolution(
         orig_backward = timize(torch.autograd.grad, 'Orig_SpectralConv2D Backward', label, sublabel, **kwargs)
 
         # 优化 正向过程
-        model, X, Y, G = gen_data(resolution, ModuleClz=SpectralConv2D_Exts)
+        model, X, Y, G = gen_data(resolution, ModuleClz=Sp_SpectralConv2D)
         kwargs = dict(X=X)
         exts_forward = timize(model, 'Exts_SpectralConv2D Forward', label, sublabel, **kwargs)
         # 优化 反向过程
@@ -67,7 +67,7 @@ def time_fno2d_wrt_resolution(
     msg += f'======== {hint} ========' + os.linesep
     msg += f'{str(compare)}' + os.linesep
     print('', msg, sep=os.linesep)
-    path = os.path.join(TIME_PATH, f'{hint}.txt')
+    path = os.path.join(EVALUATION_PATH, f'{hint}.txt')
     with open(path, mode='w+', encoding='utf=8') as f:
         f.write(msg)
 
@@ -82,8 +82,8 @@ def time_fno2d_wrt_batch(
 
     # 生成数据辅助函数
     def gen_data(batch, ModuleClz):
-        modes = math.ceil(math.sqrt(resolution))
-        model: torch.nn.Module = ModuleClz(in_dim, out_dim, modes=modes, droprate=0.)
+        mode = math.ceil(math.sqrt(resolution))
+        model: torch.nn.Module = ModuleClz(in_dim, out_dim, mode=mode, droprate=0.0, activation='silu')
         model = model.to(device)
         X = torch.rand([batch, resolution, resolution, in_dim], device=device, requires_grad=True)
         Y = model(X)
@@ -106,7 +106,7 @@ def time_fno2d_wrt_batch(
         orig_backward = timize(torch.autograd.grad, 'Orig_SpectralConv2D Backward', label, sublabel, **kwargs)
 
         # 优化 正向过程
-        model, X, Y, G = gen_data(batch, ModuleClz=SpectralConv2D_Exts)
+        model, X, Y, G = gen_data(batch, ModuleClz=Sp_SpectralConv2D)
         kwargs = dict(X=X)
         exts_forward = timize(model, 'Exts_SpectralConv2D Forward', label, sublabel, **kwargs)
         # 优化 反向过程
@@ -125,11 +125,11 @@ def time_fno2d_wrt_batch(
     msg += f'in_dim     = {in_dim}' + os.linesep
     msg += f'out_dim    = {out_dim}' + os.linesep
     msg += f'resolution = {resolution}' + os.linesep
-    msg += f'modes      = {math.ceil(math.sqrt(resolution))}' + os.linesep
+    msg += f'mode      = {math.ceil(math.sqrt(resolution))}' + os.linesep
     msg += f'batch_list = {batch_list}' + os.linesep
     msg += f'======== {hint} ========' + os.linesep
     msg += f'{str(compare)}' + os.linesep
     print('', msg, sep=os.linesep)
-    path = os.path.join(TIME_PATH, f'{hint}.txt')
+    path = os.path.join(EVALUATION_PATH, f'{hint}.txt')
     with open(path, mode='w+', encoding='utf=8') as f:
         f.write(msg)

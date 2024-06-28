@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from SpGT.common.path import TEMPOUT_PATH
+from SpGT.common.path import VISUALIZATION_PATH
 
 # 设置全局字体大小
 plt.rcParams.update({'font.size': 30, 'font.weight': 'bold'})
@@ -69,5 +69,5 @@ handles = [b1, b2, l1,]
 labels = [h.get_label() for h in handles]
 plt.legend(handles, labels, loc='upper left', fontsize=20, bbox_to_anchor=(0., 0.96))
 
-plt.savefig(os.path.join(TEMPOUT_PATH, 'skinny_gemm_wrt_resol.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.savefig(os.path.join(VISUALIZATION_PATH, 'skinny_gemm_wrt_resol.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
 plt.show()

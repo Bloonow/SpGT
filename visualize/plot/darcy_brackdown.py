@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from SpGT.common.path import TEMPOUT_PATH
+from SpGT.common.path import VISUALIZATION_PATH
 
 # 设置全局字体大小
 plt.rcParams.update({'font.size': 16, 'font.weight': 'bold'})
@@ -86,5 +86,5 @@ ax.set_ylim(0, df.loc['Model'].max())
 ax.legend(loc='best')
 
 plt.tight_layout()
-plt.savefig(os.path.join(TEMPOUT_PATH, 'darcy_breakdown.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.savefig(os.path.join(VISUALIZATION_PATH, 'darcy_breakdown.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
 plt.show()

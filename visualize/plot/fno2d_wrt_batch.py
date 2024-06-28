@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from SpGT.common.path import TEMPOUT_PATH
+from SpGT.common.path import VISUALIZATION_PATH
 
 # 设置全局字体大小
 plt.rcParams.update({'font.size': 30, 'font.weight': 'bold'})
@@ -88,5 +88,5 @@ handles = [b1, b2, b3, b4, l1, l2, l3,]
 labels = [h.get_label() for h in handles]
 plt.legend(handles, labels, loc='lower left', fontsize=20, bbox_to_anchor=(0., 0.125))
 
-plt.savefig(os.path.join(TEMPOUT_PATH, 'fno2d_wrt_batch.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.savefig(os.path.join(VISUALIZATION_PATH, 'fno2d_wrt_batch.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
 plt.show()

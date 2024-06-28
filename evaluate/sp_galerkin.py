@@ -129,7 +129,7 @@ def time_skinny_gemm_wrt_batch(
 
 def time_projpos_lnorm_wrt_resolution(
     resolution_list: list[int],
-    batch=16, n_head=4, d_k=32, d_pos=2, norm_eps=1.e-5
+    batch=16, num_head=4, dim_head=32, dim_position=2, norm_eps=1.e-5
 ):
     # 测试的所有情况 resolution_list = [32, 64, 128, 256, 512, 1024]
     device = torch.cuda.current_device()
@@ -138,14 +138,14 @@ def time_projpos_lnorm_wrt_resolution(
     # 生成数据辅助函数
     def gen_data(resolution):
         seqlen = resolution * resolution
-        d_model = n_head * d_k
+        d_model = num_head * dim_head
         input = torch.rand([batch, seqlen, d_model], device=device, requires_grad=True)
         weight = torch.rand([d_model, d_model], device=device, requires_grad=True)
         bias = torch.rand([d_model], device=device, requires_grad=True)
-        pos = torch.rand([batch, seqlen, d_pos], device=device)
-        lnw = torch.rand([n_head, d_k], device=device, requires_grad=True)
-        lnb = torch.rand([n_head, d_k], device=device, requires_grad=True)
-        return input, weight, bias, pos, lnw, lnb
+        position = torch.rand([batch, seqlen, dim_position], device=device)
+        ln_weight = torch.rand([num_head, dim_head], device=device, requires_grad=True)
+        ln_bias = torch.rand([num_head, dim_head], device=device, requires_grad=True)
+        return input, weight, bias, position, ln_weight, ln_bias
 
     # 存储测试结果
     time_results = []
@@ -155,8 +155,9 @@ def time_projpos_lnorm_wrt_resolution(
         print(f'======== Timing {label}, {sublabel} ========')
 
         # projpos 基准 正向过程
-        input, weight, bias, pos, _, _ = gen_data(resolution)
-        kwargs = dict(input=input, weight=weight, bias=bias, pos=pos, n_head=n_head, d_k=d_k, d_pos=d_pos)
+        input, weight, bias, position, _, _ = gen_data(resolution)
+        kwargs = dict(input=input, weight=weight, bias=bias, position=position,
+                      num_head=num_head, dim_head=dim_head, dim_position=dim_position)
         Y = projpos_orig(**kwargs)
         G = torch.rand_like(Y)
         projpos_orig_forward = timize(projpos_orig, 'projpos_orig Forward', label, sublabel, **kwargs)
@@ -165,8 +166,9 @@ def time_projpos_lnorm_wrt_resolution(
         projpos_orig_backward = timize(torch.autograd.grad, 'projpos_orig Backward', label, sublabel, **kwargs)
 
         # projpos 优化 正向过程
-        input, weight, bias, pos, _, _ = gen_data(resolution)
-        kwargs = dict(input=input, weight=weight, bias=bias, pos=pos, n_head=n_head, d_k=d_k, d_pos=d_pos)
+        input, weight, bias, position, _, _ = gen_data(resolution)
+        kwargs = dict(input=input, weight=weight, bias=bias, position=position,
+                      num_head=num_head, dim_head=dim_head, dim_position=dim_position)
         Y = projpos_cuda(**kwargs)
         G = torch.rand_like(Y)
         projpos_cuda_forward = timize(projpos_cuda, 'projpos_cuda Forward', label, sublabel, **kwargs)
@@ -175,24 +177,28 @@ def time_projpos_lnorm_wrt_resolution(
         projpos_cuda_backward = timize(torch.autograd.grad, 'projpos_cuda Backward', label, sublabel, **kwargs)
 
         # projpos_lnorm 基准 正向过程
-        input, weight, bias, pos, lnw, lnb = gen_data(resolution)
-        kwargs = dict(input=input, weight=weight, bias=bias, lnw=lnw, lnb=lnb, pos=pos, norm_eps=norm_eps, n_head=n_head, d_k=d_k, d_pos=d_pos)
+        input, weight, bias, position, ln_weight, ln_bias = gen_data(resolution)
+        kwargs = dict(input=input, weight=weight, bias=bias, ln_weight=ln_weight, ln_bias=ln_bias,
+                      position=position, norm_eps=norm_eps, num_head=num_head, dim_head=dim_head, dim_position=dim_position)
         Y = projpos_lnorm_orig(**kwargs)
         G = torch.rand_like(Y)
         projpos_lnorm_orig_forward = timize(projpos_lnorm_orig, 'projpos_lnorm_orig Forward', label, sublabel, **kwargs)
         # projpos_lnorm 基准 反向过程
-        kwargs = dict(outputs=Y, inputs=[input, weight, bias, lnw, lnb], grad_outputs=G, retain_graph=True)
-        projpos_lnorm_orig_backward = timize(torch.autograd.grad, 'projpos_lnorm_orig Backward', label, sublabel, **kwargs)
+        kwargs = dict(outputs=Y, inputs=[input, weight, bias, ln_weight, ln_bias], grad_outputs=G, retain_graph=True)
+        projpos_lnorm_orig_backward = timize(
+            torch.autograd.grad, 'projpos_lnorm_orig Backward', label, sublabel, **kwargs)
 
         # projpos_lnorm 优化 正向过程
-        input, weight, bias, pos, lnw, lnb = gen_data(resolution)
-        kwargs = dict(input=input, weight=weight, bias=bias, lnw=lnw, lnb=lnb, pos=pos, norm_eps=norm_eps, n_head=n_head, d_k=d_k, d_pos=d_pos)
+        input, weight, bias, position, ln_weight, ln_bias = gen_data(resolution)
+        kwargs = dict(input=input, weight=weight, bias=bias, ln_weight=ln_weight, ln_bias=ln_bias,
+                      position=position, norm_eps=norm_eps, num_head=num_head, dim_head=dim_head, dim_position=dim_position)
         Y = projpos_lnorm_cuda(**kwargs)
         G = torch.rand_like(Y)
         projpos_lnorm_cuda_forward = timize(projpos_lnorm_cuda, 'projpos_lnorm_cuda Forward', label, sublabel, **kwargs)
         # projpos_lnorm 优化 反向过程
-        kwargs = dict(outputs=Y, inputs=[input, weight, bias, lnw, lnb], grad_outputs=G, retain_graph=True)
-        projpos_lnorm_cuda_backward = timize(torch.autograd.grad, 'projpos_lnorm_cuda Backward', label, sublabel, **kwargs)
+        kwargs = dict(outputs=Y, inputs=[input, weight, bias, ln_weight, ln_bias], grad_outputs=G, retain_graph=True)
+        projpos_lnorm_cuda_backward = timize(
+            torch.autograd.grad, 'projpos_lnorm_cuda Backward', label, sublabel, **kwargs)
 
         # 收集测试结果
         time_results.append(projpos_orig_forward)
@@ -208,9 +214,9 @@ def time_projpos_lnorm_wrt_resolution(
     hint = '' + caller_name() + '_' + get_daytime_string()
     msg = f'======== {torch.cuda.get_device_name(device)} ========' + os.linesep
     msg += f'norm_eps        = {norm_eps}' + os.linesep
-    msg += f'n_head          = {n_head}' + os.linesep
-    msg += f'd_k             = {d_k}' + os.linesep
-    msg += f'd_pos           = {d_pos}' + os.linesep
+    msg += f'num_head        = {num_head}' + os.linesep
+    msg += f'dim_head        = {dim_head}' + os.linesep
+    msg += f'dim_position    = {dim_position}' + os.linesep
     msg += f'batch           = {batch}' + os.linesep
     msg += f'resolution_list = {resolution_list}' + os.linesep
     msg += f'seqlen_list     = {[r * r for r in resolution_list]}' + os.linesep
@@ -224,7 +230,7 @@ def time_projpos_lnorm_wrt_resolution(
 
 def time_projpos_lnorm_wrt_batch(
     batch_list: list[int],
-    resolution=256, n_head=4, d_k=32, d_pos=2, norm_eps=1.e-5
+    resolution=256, num_head=4, dim_head=32, dim_position=2, norm_eps=1.e-5
 ):
     # 测试的所有情况 batch_list = [2, 4, 8, 16, 32, 64]
     device = torch.cuda.current_device()
@@ -233,14 +239,14 @@ def time_projpos_lnorm_wrt_batch(
     # 生成数据辅助函数
     def gen_data(batch):
         seqlen = resolution * resolution
-        d_model = n_head * d_k
+        d_model = num_head * dim_head
         input = torch.rand([batch, seqlen, d_model], device=device, requires_grad=True)
         weight = torch.rand([d_model, d_model], device=device, requires_grad=True)
         bias = torch.rand([d_model], device=device, requires_grad=True)
-        pos = torch.rand([batch, seqlen, d_pos], device=device)
-        lnw = torch.rand([n_head, d_k], device=device, requires_grad=True)
-        lnb = torch.rand([n_head, d_k], device=device, requires_grad=True)
-        return input, weight, bias, pos, lnw, lnb
+        position = torch.rand([batch, seqlen, dim_position], device=device)
+        ln_weight = torch.rand([num_head, dim_head], device=device, requires_grad=True)
+        ln_bias = torch.rand([num_head, dim_head], device=device, requires_grad=True)
+        return input, weight, bias, position, ln_weight, ln_bias
 
     # 存储测试结果
     time_results = []
@@ -250,8 +256,9 @@ def time_projpos_lnorm_wrt_batch(
         print(f'======== Timing {label}, {sublabel} ========')
 
         # projpos 基准 正向过程
-        input, weight, bias, pos, _, _ = gen_data(batch)
-        kwargs = dict(input=input, weight=weight, bias=bias, pos=pos, n_head=n_head, d_k=d_k, d_pos=d_pos)
+        input, weight, bias, position, _, _ = gen_data(batch)
+        kwargs = dict(input=input, weight=weight, bias=bias, position=position,
+                      num_head=num_head, dim_head=dim_head, dim_position=dim_position)
         Y = projpos_orig(**kwargs)
         G = torch.rand_like(Y)
         projpos_orig_forward = timize(projpos_orig, 'projpos_orig Forward', label, sublabel, **kwargs)
@@ -260,8 +267,9 @@ def time_projpos_lnorm_wrt_batch(
         projpos_orig_backward = timize(torch.autograd.grad, 'projpos_orig Backward', label, sublabel, **kwargs)
 
         # projpos 优化 正向过程
-        input, weight, bias, pos, _, _ = gen_data(batch)
-        kwargs = dict(input=input, weight=weight, bias=bias, pos=pos, n_head=n_head, d_k=d_k, d_pos=d_pos)
+        input, weight, bias, position, _, _ = gen_data(batch)
+        kwargs = dict(input=input, weight=weight, bias=bias, position=position,
+                      num_head=num_head, dim_head=dim_head, dim_position=dim_position)
         Y = projpos_cuda(**kwargs)
         G = torch.rand_like(Y)
         projpos_cuda_forward = timize(projpos_cuda, 'projpos_cuda Forward', label, sublabel, **kwargs)
@@ -270,24 +278,28 @@ def time_projpos_lnorm_wrt_batch(
         projpos_cuda_backward = timize(torch.autograd.grad, 'projpos_cuda Backward', label, sublabel, **kwargs)
 
         # projpos_lnorm 基准 正向过程
-        input, weight, bias, pos, lnw, lnb = gen_data(batch)
-        kwargs = dict(input=input, weight=weight, bias=bias, lnw=lnw, lnb=lnb, pos=pos, norm_eps=norm_eps, n_head=n_head, d_k=d_k, d_pos=d_pos)
+        input, weight, bias, position, ln_weight, ln_bias = gen_data(batch)
+        kwargs = dict(input=input, weight=weight, bias=bias, ln_weight=ln_weight, ln_bias=ln_bias,
+                      position=position, norm_eps=norm_eps, num_head=num_head, dim_head=dim_head, dim_position=dim_position)
         Y = projpos_lnorm_orig(**kwargs)
         G = torch.rand_like(Y)
         projpos_lnorm_orig_forward = timize(projpos_lnorm_orig, 'projpos_lnorm_orig Forward', label, sublabel, **kwargs)
         # projpos_lnorm 基准 反向过程
-        kwargs = dict(outputs=Y, inputs=[input, weight, bias, lnw, lnb], grad_outputs=G, retain_graph=True)
-        projpos_lnorm_orig_backward = timize(torch.autograd.grad, 'projpos_lnorm_orig Backward', label, sublabel, **kwargs)
+        kwargs = dict(outputs=Y, inputs=[input, weight, bias, ln_weight, ln_bias], grad_outputs=G, retain_graph=True)
+        projpos_lnorm_orig_backward = timize(
+            torch.autograd.grad, 'projpos_lnorm_orig Backward', label, sublabel, **kwargs)
 
         # projpos_lnorm 优化 正向过程
-        input, weight, bias, pos, lnw, lnb = gen_data(batch)
-        kwargs = dict(input=input, weight=weight, bias=bias, lnw=lnw, lnb=lnb, pos=pos, norm_eps=norm_eps, n_head=n_head, d_k=d_k, d_pos=d_pos)
+        input, weight, bias, position, ln_weight, ln_bias = gen_data(batch)
+        kwargs = dict(input=input, weight=weight, bias=bias, ln_weight=ln_weight, ln_bias=ln_bias,
+                      position=position, norm_eps=norm_eps, num_head=num_head, dim_head=dim_head, dim_position=dim_position)
         Y = projpos_lnorm_cuda(**kwargs)
         G = torch.rand_like(Y)
         projpos_lnorm_cuda_forward = timize(projpos_lnorm_cuda, 'projpos_lnorm_cuda Forward', label, sublabel, **kwargs)
         # projpos_lnorm 优化 反向过程
-        kwargs = dict(outputs=Y, inputs=[input, weight, bias, lnw, lnb], grad_outputs=G, retain_graph=True)
-        projpos_lnorm_cuda_backward = timize(torch.autograd.grad, 'projpos_lnorm_cuda Backward', label, sublabel, **kwargs)
+        kwargs = dict(outputs=Y, inputs=[input, weight, bias, ln_weight, ln_bias], grad_outputs=G, retain_graph=True)
+        projpos_lnorm_cuda_backward = timize(
+            torch.autograd.grad, 'projpos_lnorm_cuda Backward', label, sublabel, **kwargs)
 
         # 收集测试结果
         time_results.append(projpos_orig_forward)
@@ -302,13 +314,13 @@ def time_projpos_lnorm_wrt_batch(
     compare = benchmark.Compare(results=time_results)
     hint = '' + caller_name() + '_' + get_daytime_string()
     msg = f'======== {torch.cuda.get_device_name(device)} ========' + os.linesep
-    msg += f'norm_eps   = {norm_eps}' + os.linesep
-    msg += f'n_head     = {n_head}' + os.linesep
-    msg += f'd_k        = {d_k}' + os.linesep
-    msg += f'd_pos      = {d_pos}' + os.linesep
-    msg += f'resolution = {resolution}' + os.linesep
-    msg += f'seqlen     = {resolution * resolution}' + os.linesep
-    msg += f'batch_list = {batch_list}' + os.linesep
+    msg += f'norm_eps     = {norm_eps}' + os.linesep
+    msg += f'num_head     = {num_head}' + os.linesep
+    msg += f'dim_head     = {dim_head}' + os.linesep
+    msg += f'dim_position = {dim_position}' + os.linesep
+    msg += f'resolution   = {resolution}' + os.linesep
+    msg += f'seqlen       = {resolution * resolution}' + os.linesep
+    msg += f'batch_list   = {batch_list}' + os.linesep
     msg += f'======== {hint} ========' + os.linesep
     msg += f'{str(compare)}' + os.linesep
     print('', msg, sep=os.linesep)

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import loadmat
 
-from SpGT.common.path import DATA_PATH, TEMPOUT_PATH
+from SpGT.common.path import DATA_PATH, VISUALIZATION_PATH
 
 idx = 3  # 数据索引
 sample: dict = loadmat(os.path.join(DATA_PATH, 'DarcySample.mat'))
@@ -33,12 +33,12 @@ fig, axs = plt.subplots(2, 4, layout='constrained', figsize=(16, 8))
 for key, ax in zip(sample.keys(), iter(axs.flatten())):
     ax.imshow(sample[key], aspect='equal')
     ax.axis('off')
-# plt.savefig(os.path.join(TEMPOUT_PATH, 'darcy_insection.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.savefig(os.path.join(VISUALIZATION_PATH, 'darcy_insection.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+plt.show()
 
 # fig, ax = plt.subplots(layout='constrained', figsize=(4, 4))
 # for key in sample.keys():
 #     ax.imshow(sample[key], aspect='equal')
 #     ax.axis('off')
-#     plt.savefig(os.path.join(TEMPOUT_PATH, f'{key}.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
-
-plt.show()
+#     plt.savefig(os.path.join(VISUALIZATION_PATH, f'{key}.png'), format='png', transparent=True, dpi=360, bbox_inches='tight')
+#     plt.show()
