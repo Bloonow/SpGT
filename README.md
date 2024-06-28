@@ -50,7 +50,7 @@ To ensure the correct path, we use ROOT_PATH in the SpGT/common/path.py script t
 
 To avoid excessive repository size, we store the dataset files and trained models outside the project and use symbolic links to point to the actual resource directories. Before running the scripts, users need to create symbolic links named SpGT/storage/data and SpGT/storage/model, pointing to the directories where the dataset and trained models are actually stored, respectively.
 
-Use the SpGT/dataset/darcy_generate/gen.m file to generate the necessary dataset. If you choose to use the downloaded $421\times421$ resolution dataset, you can skip this step.
+Use the SpGT/dataset/darcy_generate/gen.m file to generate the necessary dataset. Alternatively, you can download the Darcy equation data with a resolution of $421\times421$ from the link https://drive.google.com/drive/folders/1UnbQh2WWc6knEHbLn-ZaXrKUZhp7pjt-?usp=sharing. If you choose to use the downloaded $421\times421$ resolution dataset, you can skip this step.
 
 To generate the required Darcy equation dataset, run the SpGT/dataset/darcy_generate/gen.m script using MATLAB. The generated dataset will be stored in the same directory. You can use num_file to specify the number of files to generate, num_data to specify the number of data points in each file, and S to specify the resolution of each data point.
 
