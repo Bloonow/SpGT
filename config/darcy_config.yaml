@@ -19,7 +19,7 @@ valid_dataset: darcy_R421_N1024_2.mat
 
 
 # Module Common Configuration
-name_module: GT  # GT or SpGT
+name_module: SpGT  # GT or SpGT
 dim_hidden: 128
 drop_module: 0.0
 

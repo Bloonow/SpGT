@@ -14,6 +14,13 @@ from SpGT.network.sp_model import Sp_GalerkinTransformer2D
 
 
 def darcy_train_ddp(cfg):
+    if cfg['name_module'] == 'GT':
+        ModuleClz = GalerkinTransformer2D
+    elif cfg['name_module'] == 'SpGT':
+        ModuleClz = Sp_GalerkinTransformer2D
+    else:
+        raise NotImplementedError(f"Module {cfg['name_module']} has no implementation")
+
     # 一些超参数
     device = torch.cuda.current_device()
     set_seed(cfg['seed'])
@@ -51,10 +58,10 @@ def darcy_train_ddp(cfg):
     # 构建 DDP 模型与训练配置
     torch.cuda.empty_cache()
     cfg['target_normalizer'] = target_normalizer.numpy_to_torch(device)
-    model = GalerkinTransformer2D(cfg)
+    model = ModuleClz(cfg)
     model = model.to(device)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=[device])
-    print(f"\nThe Numbers of Model's Parameters: {get_num_params(model)}\n")
+    print(f"\nThe Numbers of {cfg['name_module']} Model's Parameters: {get_num_params(model)}\n")
     epochs = cfg['epochs']
     lr = cfg['lr']
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -79,8 +86,8 @@ def darcy_train_ddp(cfg):
     model: torch.nn.Module = model.module
     # 主进程保存结果
     if is_main_process():
-        name, r, d, s = cfg['name_module'], r, cfg['dim_hidden'], cfg['num_frequence_mode']
-        save_path = os.path.join(MODEL_PATH, f'{name}_r{r}d{d}s{s}_{get_daytime_string()}.pt')
+        name, r, d, m = cfg['name_module'], r, cfg['dim_hidden'], cfg['num_frequence_mode']
+        save_path = os.path.join(MODEL_PATH, f'{name}_r{r}d{d}m{m}_{get_daytime_string()}.pt')
         checkpoint['Train_Config'] = cfg
         torch.save(checkpoint, save_path)
         print(f'========== Saving Results at {save_path} ==========')

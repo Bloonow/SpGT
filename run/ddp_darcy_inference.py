@@ -1,7 +1,7 @@
 import os
 import time
 import torch
-from torch.utils.data.dataloader import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 from SpGT.common.path import DATA_PATH, MODEL_PATH
 from SpGT.common.trivial import get_num_params, set_seed
 from SpGT.config.config_accessor import get_darcy_config
@@ -12,7 +12,7 @@ from SpGT.network.model import GalerkinTransformer2D
 from SpGT.network.sp_model import Sp_GalerkinTransformer2D
 
 
-def darcy_inference(cfg, checkpoint):
+def darcy_inference_ddp(cfg, checkpoint):
     if cfg['name_module'] == 'GT':
         ModuleClz = GalerkinTransformer2D
     elif cfg['name_module'] == 'SpGT':
@@ -37,8 +37,9 @@ def darcy_inference(cfg, checkpoint):
         valid_path, sub_node, sub_attn, cfg['num_data'], cfg['fine_resolution'], is_training=False,
         noise=cfg['noise'], random_seed=cfg['seed'], node_normalizer=node_normalizer
     )
+    valid_sampler = DistributedSampler(valid_ds, seed=cfg['seed'], shuffle=False)
     valid_loader = DataLoader(
-        valid_ds, 2 * cfg['batch_size'], shuffle=False, num_workers=cfg['num_load_worker'], pin_memory=True
+        valid_ds, 2 * cfg['batch_size'], sampler=valid_sampler, num_workers=cfg['num_load_worker'], pin_memory=True
     )
     eg = next(iter(valid_loader))
     print('=' * 20, 'Data loader batch', '=' * 20)
@@ -53,6 +54,7 @@ def darcy_inference(cfg, checkpoint):
     model = ModuleClz(cfg)
     model.load_state_dict(checkpoint['Module'])
     model = model.to(device)
+    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=[device])
     print(f"\nThe Numbers of {cfg['name_module']} Model's Parameters: {get_num_params(model)}\n")
     valid_loss_func = WeightedL2Loss2D(is_regularization=False, S=r)
 
@@ -67,4 +69,4 @@ def darcy_inference(cfg, checkpoint):
 if __name__ == '__main__':
     cfg = get_darcy_config()
     checkpoint = torch.load(os.path.join(MODEL_PATH, 'SpGT_r141d128s12_0628_2228.pt'), map_location='cpu')
-    darcy_inference(cfg=cfg, checkpoint=checkpoint)
+    darcy_inference_ddp(cfg=cfg, checkpoint=checkpoint)
