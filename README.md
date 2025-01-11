@@ -1,3 +1,25 @@
+# Intro
+
+This project is the code of paper *Exploring Efficient Partial Differential Equation Solution Using Speed Galerkin Transformer*.
+
+```latex
+@inproceedings{10.1109/SC41406.2024.00084,
+author = {Wang, Xun and Zhu, Zeyang and Meng, Xiangyu and Song, Tao},
+title = {Exploring Efficient Partial Differential Equation Solution Using Speed Galerkin Transformer},
+year = {2024},
+isbn = {9798350352917},
+publisher = {IEEE Press},
+url = {https://doi.org/10.1109/SC41406.2024.00084},
+doi = {10.1109/SC41406.2024.00084},
+booktitle = {Proceedings of the International Conference for High Performance Computing, Networking, Storage, and Analysis},
+articleno = {78},
+numpages = {14},
+keywords = {Darcy Flow Equation, Fourier Neural Operator, Galerkin Attention, Model Acceleration Using GPUs},
+location = {Atlanta, GA, USA},
+series = {SC '24}
+}
+```
+
 # Code Organization
 
 ```
