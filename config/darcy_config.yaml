@@ -1,0 +1,64 @@
+# `num_` means the number of data, layers, etc.
+# `dim_` means the dimension of data, features, etc.
+# `drop_` means the droprate of layers
+# `acti_` means the activation function of layers
+
+
+# Darcy Dataset
+num_data: 1024
+dim_node: 1
+dim_target: 1
+dim_position: 2
+noise: 0.0
+boundary_condition: dirichlet
+fine_resolution: 421
+subsample_node: 3  # r_node
+subsample_attn: 6  # r_attn
+train_dataset: darcy_R421_N1024_1.mat
+valid_dataset: darcy_R421_N1024_2.mat
+
+
+# Module Common Configuration
+name_module: SpGT  # GT or SpGT
+dim_hidden: 128
+drop_module: 0.0
+
+
+# DownScaler and UpScaler
+drop_downscaler: 0.05
+acti_downscaler: relu
+drop_upscaler: 0.0
+acti_upscaler: silu
+resolution_size: null
+
+# Encoder Mixer
+num_encoder_layer: 6
+# Galerkin Attention
+num_head: 4
+attn_xavier: 0.01
+attn_diagonal: 0.01
+attn_symmetric: False
+attn_norm_eps: 1.e-6  # 1.e-5 if r_attn >= 211 else 1.e-7
+drop_encoder_attn: 0.0
+drop_encoder_attn_fc: 0.05
+# Feed Forward Network
+dim_encoder_ffn: 256
+drop_encoder_ffn: 0.05
+acti_encoder_ffn: relu
+
+# Decoder Regressor
+num_decoder_layer: 2
+drop_decoder_layer: 0.0
+acti_decoder_layer: silu
+# Spectral Conv2D
+dim_spatial_hidden: 32
+num_frequence_mode: 12
+
+
+# Training Configuration
+seed: 1127802
+metric_gamma: 0.5
+lr: 1.e-3
+epochs: 100
+batch_size: 4
+num_load_worker: 8
